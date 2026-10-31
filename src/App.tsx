@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { EyeCare, type Screen, type State } from './plugin'
 import { BreakScreen } from './BreakScreen'
 import { Home } from './Home'
+import { SettingsScreen } from './SettingsScreen'
 import { WaterScreen } from './WaterScreen'
 
 export type View = Screen | 'settings'
@@ -50,12 +51,8 @@ export function App() {
       {error && <p className="error" role="alert">{error}</p>}
       {view === 'short' || view === 'long' ? <BreakScreen {...props} type={view} />
         : view === 'water' ? <WaterScreen {...props} />
-        : view === 'home' ? <Home {...props} />
-        : <Stub view={view} go={setView} />}
+        : view === 'settings' ? <SettingsScreen {...props} />
+        : <Home {...props} />}
     </main>
   )
-}
-
-function Stub({ view, go }: { view: View; go: (v: View) => void }) {
-  return <><h1>{view}</h1><button onClick={() => go('home')}>Home</button></>
 }
