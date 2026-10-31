@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { EyeCare, type Settings } from './plugin'
+import { DigitalCare, type Settings } from './plugin'
 import type { ScreenProps } from './App'
 
 type KeyOf<T> = { [K in keyof Settings]: Settings[K] extends T ? K : never }[keyof Settings]
@@ -100,7 +100,7 @@ export function SettingsScreen({ state, act, go }: ScreenProps) {
         <h2>Sound &amp; vibration</h2>
         <div className="row">
           {CHANNELS.map(([id, label]) => (
-            <button key={id} onClick={() => { EyeCare.openSystemSettings({ page: 'channel', channel: id }).catch(() => {}) }}>
+            <button key={id} onClick={() => { DigitalCare.openSystemSettings({ page: 'channel', channel: id }).catch(() => {}) }}>
               {label}
             </button>
           ))}
@@ -110,7 +110,7 @@ export function SettingsScreen({ state, act, go }: ScreenProps) {
       <p className="muted">General guidance only. If you have a kidney or heart condition, follow your doctor’s advice on water.</p>
 
       <div className="row">
-        <button className="primary" onClick={() => { act(EyeCare.saveSettings(draft)); go('home') }}>Save</button>
+        <button className="primary" onClick={() => { act(DigitalCare.saveSettings(draft)); go('home') }}>Save</button>
         <button onClick={() => go('home')}>Cancel</button>
       </div>
     </>

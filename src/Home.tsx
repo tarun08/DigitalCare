@@ -1,4 +1,4 @@
-import { EyeCare, type SystemPage } from './plugin'
+import { DigitalCare, type SystemPage } from './plugin'
 import type { ScreenProps } from './App'
 import { Ring } from './Ring'
 import { SetupCard } from './SetupCard'
@@ -7,7 +7,7 @@ import { fmtClock, fmtLeft, useNow } from './time'
 export function Home({ state, act, go }: ScreenProps) {
   const now = useNow()
   const s = state.settings
-  const open = (page: SystemPage) => { EyeCare.openSystemSettings({ page }).catch(() => {}) }
+  const open = (page: SystemPage) => { DigitalCare.openSystemSettings({ page }).catch(() => {}) }
 
   const breakLine = state.breakEndAt ? 'Break in progress'
     : state.nextBreakAt ? `Next ${state.nextBreakType === 'long' ? 'long break' : 'eye break'} in ${fmtLeft(state.nextBreakAt - now)}`
@@ -20,7 +20,7 @@ export function Home({ state, act, go }: ScreenProps) {
 
   return (
     <>
-      <h1>EyeCare</h1>
+      <h1>DigitalCare</h1>
       <SetupCard state={state} />
 
       <section className="card">
@@ -29,7 +29,7 @@ export function Home({ state, act, go }: ScreenProps) {
             <p className="big">
               {state.pausedUntil === state.nextDayStartAt ? 'Paused until tomorrow' : `Paused until ${fmtClock(state.pausedUntil)}`}
             </p>
-            <button className="primary" onClick={() => act(EyeCare.resume())}>Resume</button>
+            <button className="primary" onClick={() => act(DigitalCare.resume())}>Resume</button>
           </>
         ) : !state.inDay ? (
           <p className="big">Reminders start at {state.nextDayStartAt && fmtClock(state.nextDayStartAt)}</p>
@@ -47,7 +47,7 @@ export function Home({ state, act, go }: ScreenProps) {
           <span>glasses</span>
           <span className="muted">{(state.glasses * s.glassMl / 1000).toFixed(1)} L</span>
         </Ring>
-        <button className="primary" onClick={() => act(EyeCare.logGlass())}>+1 glass</button>
+        <button className="primary" onClick={() => act(DigitalCare.logGlass())}>+1 glass</button>
         <p>{state.tip}</p>
         <p className="muted">A glass about 30 min before meals.</p>
       </section>
@@ -56,9 +56,9 @@ export function Home({ state, act, go }: ScreenProps) {
         <section className="card">
           <h2>Pause reminders</h2>
           <div className="row">
-            <button onClick={() => act(EyeCare.pause({ minutes: 30 }))}>30 min</button>
-            <button onClick={() => act(EyeCare.pause({ minutes: 60 }))}>1 h</button>
-            <button onClick={() => act(EyeCare.pause({ minutes: null }))}>Until tomorrow</button>
+            <button onClick={() => act(DigitalCare.pause({ minutes: 30 }))}>30 min</button>
+            <button onClick={() => act(DigitalCare.pause({ minutes: 60 }))}>1 h</button>
+            <button onClick={() => act(DigitalCare.pause({ minutes: null }))}>Until tomorrow</button>
           </div>
         </section>
       )}

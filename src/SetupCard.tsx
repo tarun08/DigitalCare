@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { EyeCare, type State, type SystemPage } from './plugin'
+import { DigitalCare, type State, type SystemPage } from './plugin'
 
-const DISMISSED = 'eyecare.vivoStepsDismissed'
+const DISMISSED = 'digitalcare.vivoStepsDismissed'
 
 function readDismissed(): boolean {
   try { return localStorage.getItem(DISMISSED) === '1' } catch { return false }
@@ -9,7 +9,7 @@ function readDismissed(): boolean {
 
 export function SetupCard({ state }: { state: State }) {
   const [dismissed, setDismissed] = useState(readDismissed)
-  const open = (page: SystemPage) => { EyeCare.openSystemSettings({ page }).catch(() => {}) }
+  const open = (page: SystemPage) => { DigitalCare.openSystemSettings({ page }).catch(() => {}) }
   const rows: [string, boolean, SystemPage][] = [
     ['Notifications', state.setup.notifications, 'channel'],
     ['Battery optimization off', state.setup.battery, 'battery'],
@@ -38,10 +38,10 @@ export function SetupCard({ state }: { state: State }) {
         <>
           <h3>Vivo phones also need</h3>
           <ol>
-            <li>Settings → Battery → Background power consumption management → EyeCare → allow high background usage / don't restrict.</li>
-            <li>Settings → Apps → Autostart (on some versions: i Manager → App manager → Autostart) → EyeCare on.</li>
+            <li>Settings → Battery → Background power consumption management → DigitalCare → allow high background usage / don't restrict.</li>
+            <li>Settings → Apps → Autostart (on some versions: i Manager → App manager → Autostart) → DigitalCare on.</li>
             <li>App info → Permissions → "Display on lock screen" and "Display pop-up windows while running in background" on (needed for Wake screen).</li>
-            <li>Recent apps → lock the EyeCare card.</li>
+            <li>Recent apps → lock the DigitalCare card.</li>
           </ol>
           <p className="muted">Names vary by phone version.</p>
           <div className="row">

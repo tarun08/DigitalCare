@@ -1,4 +1,4 @@
-# EyeCare v1 — Design Spec
+# DigitalCare v1 — Design Spec
 
 Date: 2026-10-31 · Status: draft for review
 
@@ -36,7 +36,7 @@ An Android app (sideloaded APK, user's Vivo phone) that protects eyes and hydrat
 | UI | React 19 + Vite + TypeScript, plain CSS. No router, no state library, no Tailwind. |
 | Native engine | Java, in the `android/` app module, exposed as a local Capacitor plugin |
 | SDK levels | minSdk 26 (notification channels always available), target/compile 36 |
-| App id | `com.eyecare.app` |
+| App id | `com.digitalcare.app` |
 | Toolchain | Reused: Android SDK `C:\android-sdk` (platform 36, build-tools 35), Gradle 9.1 cache, Java 25. No emulator; test on the phone. |
 | Disk | About 0.5–1 GB on D: (node_modules + build output) |
 
@@ -44,7 +44,7 @@ An Android app (sideloaded APK, user's Vivo phone) that protects eyes and hydrat
 
 ```
 React UI (Home · Break screen · Settings)
-    │  EyeCarePlugin (Capacitor bridge)
+    │  DigitalCarePlugin (Capacitor bridge)
     ▼
 Native engine (Java)
     Scheduler      pure calculation: (settings, day state, now) -> next times. No Android imports.
@@ -225,10 +225,10 @@ System pages:
 
 When `manufacturer` is vivo, the app also shows these steps. They can't be checked from code, can be dismissed, and their exact names vary by FuntouchOS/OriginOS version:
 
-1. Settings → Battery → Background power consumption management → EyeCare → allow high background usage / don't restrict.
-2. Settings → Apps → Autostart (on some versions: i Manager → App manager → Autostart) → EyeCare on.
+1. Settings → Battery → Background power consumption management → DigitalCare → allow high background usage / don't restrict.
+2. Settings → Apps → Autostart (on some versions: i Manager → App manager → Autostart) → DigitalCare on.
 3. App info → Permissions → "Display on lock screen" and "Display pop-up windows while running in background" on (needed for Wake screen).
-4. Recent apps → lock the EyeCare card.
+4. Recent apps → lock the DigitalCare card.
 
 Other brands get a single link to dontkillmyapp.com.
 
@@ -257,7 +257,7 @@ React has no tests (display and bridge calls only).
 
 ## 11. Build and install
 
-`build-apk.ps1` is a trimmed copy of BhumiSetu's `create-apk.ps1`. It runs `gradlew test`, then `npm run build`, then `npx cap sync android`, then `gradlew assembleDebug`, and copies the result to `eyecare.apk`. Install with `C:\android-sdk\platform-tools\adb install -r eyecare.apk`, or copy the APK to the phone.
+`build-apk.ps1` is a trimmed copy of BhumiSetu's `create-apk.ps1`. It runs `gradlew test`, then `npm run build`, then `npx cap sync android`, then `gradlew assembleDebug`, and copies the result to `digitalcare.apk`. Install with `C:\android-sdk\platform-tools\adb install -r digitalcare.apk`, or copy the APK to the phone.
 
 ## 12. Risks
 

@@ -35,7 +35,7 @@ try {
 if ($gradleExit -ne 0) { Write-Host "Gradle build failed, aborting." -ForegroundColor Red; exit 1 }
 
 $src = "android\app\build\outputs\apk\debug\app-debug.apk"
-$dst = "eyecare.apk"
+$dst = "digitalcare.apk"
 
 # Guard against copying a leftover from an earlier run if gradle reported success without output.
 if (-not (Test-Path $src)) {

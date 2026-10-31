@@ -1,4 +1,4 @@
-package com.eyecare.app;
+package com.digitalcare.app;
 
 /** Today's counters and pending event times. Times are epoch ms, 0 = none. */
 public final class DayState {

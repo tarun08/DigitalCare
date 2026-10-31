@@ -1,4 +1,4 @@
-package com.eyecare.app;
+package com.digitalcare.app;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -6,10 +6,10 @@ import android.content.Intent;
 
 /** One receiver for alarms, notification buttons and boot/time-change broadcasts. */
 public class EventReceiver extends BroadcastReceiver {
-    static final String ALARM_PREFIX = "com.eyecare.app.ALARM.";
-    static final String SKIP = "com.eyecare.app.SKIP";
-    static final String SNOOZE = "com.eyecare.app.SNOOZE";
-    static final String GLASS = "com.eyecare.app.GLASS";
+    static final String ALARM_PREFIX = "com.digitalcare.app.ALARM.";
+    static final String SKIP = "com.digitalcare.app.SKIP";
+    static final String SNOOZE = "com.digitalcare.app.SNOOZE";
+    static final String GLASS = "com.digitalcare.app.GLASS";
 
     @Override
     public void onReceive(Context c, Intent intent) {

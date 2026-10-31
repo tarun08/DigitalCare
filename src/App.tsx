@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { EyeCare, type Screen, type State } from './plugin'
+import { DigitalCare, type Screen, type State } from './plugin'
 import { BreakScreen } from './BreakScreen'
 import { Home } from './Home'
 import { SettingsScreen } from './SettingsScreen'
@@ -21,13 +21,13 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    const refresh = () => act(EyeCare.getState())
+    const refresh = () => act(DigitalCare.getState())
     refresh()
-    EyeCare.getLaunchScreen().then(r => setView(r.screen), () => {})
+    DigitalCare.getLaunchScreen().then(r => setView(r.screen), () => {})
     const handles = [
-      EyeCare.addListener('launchScreen', e => { setView(e.screen); refresh() }),
+      DigitalCare.addListener('launchScreen', e => { setView(e.screen); refresh() }),
       // Native resume, not visibilitychange: it also fires after the permission and battery dialogs.
-      EyeCare.addListener('appResume', refresh),
+      DigitalCare.addListener('appResume', refresh),
     ]
     return () => { handles.forEach(h => h.then(x => x.remove())) }
   }, [act])
@@ -39,7 +39,7 @@ export function App() {
     const next = Math.min(...[state.nextBreakAt, state.breakEndAt, state.nextWaterAt, state.pausedUntil, state.nextDayStartAt]
       .filter((t): t is number => t !== null && t > now))
     if (!Number.isFinite(next)) return
-    const id = setTimeout(() => act(EyeCare.getState()), next - now + 1500)
+    const id = setTimeout(() => act(DigitalCare.getState()), next - now + 1500)
     return () => clearTimeout(id)
   }, [state, act])
 

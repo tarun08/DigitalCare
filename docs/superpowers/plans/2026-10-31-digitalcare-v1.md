@@ -1,26 +1,26 @@
-# EyeCare v1 Implementation Plan
+# DigitalCare v1 Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A sideloaded Android app that sends 20-20-20 eye breaks, hourly long breaks and season-tuned water reminders inside wake hours, and keeps working with the screen off, the app closed and after a reboot.
 
-**Architecture:** A Capacitor 8 shell with a React 19 UI. All timing lives in a pure-Java `Scheduler`: static transitions that change a `DayState`, unit-tested with JUnit. A thin Android layer (`Engine`, `Notifier`, `EventReceiver`) stores state in SharedPreferences, sets one exact alarm per event kind and posts notifications. A local Capacitor plugin (`EyeCarePlugin`) connects React to `Engine`. React only displays state and calls the plugin.
+**Architecture:** A Capacitor 8 shell with a React 19 UI. All timing lives in a pure-Java `Scheduler`: static transitions that change a `DayState`, unit-tested with JUnit. A thin Android layer (`Engine`, `Notifier`, `EventReceiver`) stores state in SharedPreferences, sets one exact alarm per event kind and posts notifications. A local Capacitor plugin (`DigitalCarePlugin`) connects React to `Engine`. React only displays state and calls the plugin.
 
 **Tech Stack:** Capacitor ^8.3.4, React ^19.2.6, Vite ^8.0.12, TypeScript ~6.0.2, Java (JDK 25, Gradle 9.1, AGP from the Capacitor template), JUnit 4.13.2, Python 3 + Pillow (dev-only, to draw the animations).
 
-**Spec:** [docs/superpowers/specs/2026-10-31-eyecare-v1-design.md](../specs/2026-10-31-eyecare-v1-design.md)
+**Spec:** [docs/superpowers/specs/2026-10-31-digitalcare-v1-design.md](../specs/2026-10-31-digitalcare-v1-design.md)
 
 ## Global Constraints
 
 - Project root is `D:\DigitalCare`: the Vite app sits at the root, Capacitor's `android/` sits beside it, and `docs/` stays as it is.
 - Versions match `D:\BhumiSetu\client`: `@capacitor/core|android|cli ^8.3.4`, `react`/`react-dom ^19.2.6`, `vite ^8.0.12`, `@vitejs/plugin-react ^6.0.1`, `typescript ~6.0.2`, `@types/react ^19.2.14`, `@types/react-dom ^19.2.3`. No other npm dependencies: no router, no state library, no Tailwind. Use plain CSS.
-- App id `com.eyecare.app`, app name `EyeCare`, Java package `com.eyecare.app`, minSdk 26, target/compile 36.
+- App id `com.digitalcare.app`, app name `DigitalCare`, Java package `com.digitalcare.app`, minSdk 26, target/compile 36.
 - `Settings`, `DayState`, `Season` and `Scheduler` import only `java.*` (they use `java.time`). There are no `android.*` and no `org.json` imports in these files.
 - Times are epoch-ms `long`s. In Java, `0` means "none". The bridge sends `null` for none.
-- `Engine` is the only code that reads or writes SharedPreferences (file `"eyecare"`, keys `"settings"` and `"day"`, JSON strings). React stores nothing except the dismissed Vivo steps flag in `localStorage`.
+- `Engine` is the only code that reads or writes SharedPreferences (file `"digitalcare"`, keys `"settings"` and `"day"`, JSON strings). React stores nothing except the dismissed Vivo steps flag in `localStorage`.
 - Every public `Engine` method is `static synchronized`, because the plugin thread and the receiver's main thread both call it.
 - Notification channel ids are fixed and never deleted: `short_break`, `long_break`, `break_over`, `water`.
-- Alarms use `AlarmManager.setExactAndAllowWhileIdle(RTC_WAKEUP, t, pi)`. Each `Kind` has one PendingIntent with action `com.eyecare.app.ALARM.<KIND>` and request code `kind.ordinal()`, so setting it again replaces the old alarm.
+- Alarms use `AlarmManager.setExactAndAllowWhileIdle(RTC_WAKEUP, t, pi)`. Each `Kind` has one PendingIntent with action `com.digitalcare.app.ALARM.<KIND>` and request code `kind.ordinal()`, so setting it again replaces the old alarm.
 - The manifest carries this comment, verbatim: `shortcut: USE_EXACT_ALARM is fine for sideload, Play Store publishing needs policy review`.
 - Snooze is fixed at 5 min. The first water reminder comes at wake + 10 min. Water spacing is clamped to 30–120 min.
 - UI: touch targets ≥ 48 px, AA text contrast, countdowns always shown as text, font sizes in `rem`.
@@ -52,21 +52,21 @@
 - Create: `android/local.properties` (`sdk.dir=C:\\android-sdk`, already gitignored by the template)
 
 **Interfaces:**
-- Produces: `npm run build` (`tsc --noEmit && vite build` → `dist/`), `.\build-apk.ps1` → `eyecare.apk`, and the generated `android/app/src/main/java/com/eyecare/app/MainActivity.java`.
+- Produces: `npm run build` (`tsc --noEmit && vite build` → `dist/`), `.\build-apk.ps1` → `digitalcare.apk`, and the generated `android/app/src/main/java/com/digitalcare/app/MainActivity.java`.
 
 - [ ] **Step 1: `git init`, then write the config files**
   - `package.json`: `"type": "module"`, scripts `dev: "vite"` and `build: "tsc --noEmit && vite build"`, with exactly the dependencies listed in Global Constraints (`@capacitor/cli`, `typescript`, `vite`, plugin and types under devDependencies).
   - `tsconfig.json`: one file with `strict`, `target es2023`, `lib ["ES2023","DOM"]`, `module esnext`, `moduleResolution bundler`, `jsx react-jsx`, `noEmit`, `include ["src"]`.
   - `vite.config.ts`: react plugin only.
-  - `capacitor.config.json`: `{ "appId": "com.eyecare.app", "appName": "EyeCare", "webDir": "dist" }`.
-  - `index.html`: viewport meta `width=device-width, initial-scale=1, viewport-fit=cover`, title `EyeCare`.
-  - `src/main.tsx`: renders `<h1>EyeCare</h1>`.
-  - `.gitignore`: `node_modules/`, `dist/`, `eyecare.apk`.
+  - `capacitor.config.json`: `{ "appId": "com.digitalcare.app", "appName": "DigitalCare", "webDir": "dist" }`.
+  - `index.html`: viewport meta `width=device-width, initial-scale=1, viewport-fit=cover`, title `DigitalCare`.
+  - `src/main.tsx`: renders `<h1>DigitalCare</h1>`.
+  - `.gitignore`: `node_modules/`, `dist/`, `digitalcare.apk`.
 
 - [ ] **Step 2: Install and generate Android**
 
 Run: `npm install; npm run build; npx cap add android`
-Expected: `android/` exists with `app/src/main/java/com/eyecare/app/MainActivity.java`.
+Expected: `android/` exists with `app/src/main/java/com/digitalcare/app/MainActivity.java`.
 
 - [ ] **Step 3: Set minSdk 26 and the SDK path**
 
@@ -79,20 +79,20 @@ This is a trimmed copy of `D:\BhumiSetu\client\create-apk.ps1`. It runs, in orde
 2. `npm run build`
 3. `npx cap sync android`
 4. `android\gradlew.bat assembleDebug`
-5. Copies `android\app\build\outputs\apk\debug\app-debug.apk` to `eyecare.apk`.
+5. Copies `android\app\build\outputs\apk\debug\app-debug.apk` to `digitalcare.apk`.
 
 Keep BhumiSetu's exit-code check after every step and its "APK missing, don't copy" guard. Drop `-SkipTests` and the apk build mode.
 
 - [ ] **Step 5: Build**
 
 Run: `.\build-apk.ps1`
-Expected: ends with `Done! APK at: D:\DigitalCare\eyecare.apk`.
+Expected: ends with `Done! APK at: D:\DigitalCare\digitalcare.apk`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add -A
-git commit -m "chore: scaffold EyeCare Capacitor app and APK build script"
+git commit -m "chore: scaffold DigitalCare Capacitor app and APK build script"
 ```
 
 ---
@@ -100,8 +100,8 @@ git commit -m "chore: scaffold EyeCare Capacitor app and APK build script"
 ### Task 2: Settings, day state, seasons and the day window
 
 **Files:**
-- Create: `android/app/src/main/java/com/eyecare/app/Settings.java`, `DayState.java`, `Season.java`, `Scheduler.java`
-- Test: `android/app/src/test/java/com/eyecare/app/Times.java`, `SettingsTest.java`, `DayWindowTest.java`
+- Create: `android/app/src/main/java/com/digitalcare/app/Settings.java`, `DayState.java`, `Season.java`, `Scheduler.java`
+- Test: `android/app/src/test/java/com/digitalcare/app/Times.java`, `SettingsTest.java`, `DayWindowTest.java`
 
 **Interfaces:**
 - Produces:
@@ -156,7 +156,7 @@ final class Times {
 ```
 
 ```java
-// DayWindowTest.java  (import static com.eyecare.app.Times.*)
+// DayWindowTest.java  (import static com.digitalcare.app.Times.*)
 Settings s = new Settings();
 
 @Test public void weekdayAndWeekendWindows() {
@@ -219,8 +219,8 @@ git commit -m "feat: settings, day state, seasons and wake window"
 ### Task 3: Day start, eye breaks and water transitions
 
 **Files:**
-- Modify: `android/app/src/main/java/com/eyecare/app/Scheduler.java`
-- Test: `android/app/src/test/java/com/eyecare/app/BreakTest.java`, `WaterTest.java`
+- Modify: `android/app/src/main/java/com/digitalcare/app/Scheduler.java`
+- Test: `android/app/src/test/java/com/digitalcare/app/BreakTest.java`, `WaterTest.java`
 
 **Interfaces:**
 - Consumes: Task 2's `Settings`, `DayState`, `Window`, `windowAt`, `nextWake`, `goal`.
@@ -250,7 +250,7 @@ Rules. `w = windowAt(now)`. `breakAt(t)` = `t` when `breaksOn && w != null && t 
 - [ ] **Step 1: Write the failing tests**
 
 ```java
-// BreakTest.java  (import static com.eyecare.app.Times.*)
+// BreakTest.java  (import static com.digitalcare.app.Times.*)
 Settings s = new Settings();
 DayState d = new DayState();
 
@@ -377,8 +377,8 @@ git commit -m "feat: scheduler transitions for day start, breaks and water"
 ### Task 4: Pause, recompute-from-now, alarm set and stale check
 
 **Files:**
-- Modify: `android/app/src/main/java/com/eyecare/app/Scheduler.java`
-- Test: `android/app/src/test/java/com/eyecare/app/PauseRecomputeTest.java`
+- Modify: `android/app/src/main/java/com/digitalcare/app/Scheduler.java`
+- Test: `android/app/src/test/java/com/digitalcare/app/PauseRecomputeTest.java`
 
 **Interfaces:**
 - Consumes: everything from Task 3.
@@ -408,7 +408,7 @@ Rules:
 - [ ] **Step 1: Write the failing tests**
 
 ```java
-// PauseRecomputeTest.java  (import static com.eyecare.app.Times.*; import static com.eyecare.app.Scheduler.Kind.*)
+// PauseRecomputeTest.java  (import static com.digitalcare.app.Times.*; import static com.digitalcare.app.Scheduler.Kind.*)
 Settings s = new Settings();
 DayState d = new DayState();
 @Before public void startMonday() { Scheduler.onDayStart(s, d, mon("07:00"), Z); }
@@ -505,9 +505,9 @@ git commit -m "feat: pause, recompute-from-now, alarm set and stale check"
 ### Task 5: Persistence, alarms, notifications and the event receiver
 
 **Files:**
-- Create: `android/app/src/main/java/com/eyecare/app/Json.java`, `Engine.java`, `Notifier.java`, `EventReceiver.java`
+- Create: `android/app/src/main/java/com/digitalcare/app/Json.java`, `Engine.java`, `Notifier.java`, `EventReceiver.java`
 - Modify: `android/app/src/main/AndroidManifest.xml`, `android/app/build.gradle` (add `testImplementation "org.json:json:20240303"`, which makes org.json real in JVM tests)
-- Test: `android/app/src/test/java/com/eyecare/app/JsonTest.java`
+- Test: `android/app/src/test/java/com/digitalcare/app/JsonTest.java`
 
 **Interfaces:**
 - Consumes: `Scheduler` (all of Tasks 2–4), `Settings.clamp()`, `Season.tip`.
@@ -531,7 +531,7 @@ git commit -m "feat: pause, recompute-from-now, alarm set and stale check"
     - `postWater(Context, boolean first, int glasses, int goal, String tip, boolean wakeScreen)`
     - `cancel(Context, int id)`
   - `public class EventReceiver extends BroadcastReceiver`:
-    - Action constants `ALARM_PREFIX = "com.eyecare.app.ALARM."`, `SKIP = "com.eyecare.app.SKIP"`, `SNOOZE = "com.eyecare.app.SNOOZE"`, `GLASS = "com.eyecare.app.GLASS"`.
+    - Action constants `ALARM_PREFIX = "com.digitalcare.app.ALARM."`, `SKIP = "com.digitalcare.app.SKIP"`, `SNOOZE = "com.digitalcare.app.SNOOZE"`, `GLASS = "com.digitalcare.app.GLASS"`.
   - MainActivity intent extras: `"screen"` (`short` | `long` | `water`) and `"wake"` (boolean, set only on full-screen intents).
   - `Engine.state` JSON keys, matching TS `State` in Task 6:
     - `settings` (`Json.write`), `glasses`, `goal`, `season` (id), `tip`, `inDay`
@@ -560,7 +560,7 @@ git commit -m "feat: pause, recompute-from-now, alarm set and stale check"
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `.\gradlew.bat testDebugUnitTest --tests com.eyecare.app.JsonTest`
+Run: `.\gradlew.bat testDebugUnitTest --tests com.digitalcare.app.JsonTest`
 Expected: compilation FAIL (`Json` not found).
 
 - [ ] **Step 3: Implement `Json` with reflection over `getClass().getFields()`, skipping static fields**
@@ -648,12 +648,12 @@ git commit -m "feat: engine persistence, exact alarms, notifications and receive
 ### Task 6: Capacitor plugin, MainActivity and the TS bridge
 
 **Files:**
-- Create: `android/app/src/main/java/com/eyecare/app/EyeCarePlugin.java`, `src/plugin.ts`
-- Modify: `android/app/src/main/java/com/eyecare/app/MainActivity.java`
+- Create: `android/app/src/main/java/com/digitalcare/app/DigitalCarePlugin.java`, `src/plugin.ts`
+- Modify: `android/app/src/main/java/com/digitalcare/app/MainActivity.java`
 
 **Interfaces:**
 - Consumes: Task 5's `Engine` methods, `Notifier.ensureChannels`, and the extras `screen` and `wake`.
-- Produces: `src/plugin.ts` exports `Settings`, `State`, `Screen`, `SystemPage`, `EyeCarePlugin` and `EyeCare = registerPlugin<EyeCarePlugin>('EyeCare')`:
+- Produces: `src/plugin.ts` exports `Settings`, `State`, `Screen`, `SystemPage`, `DigitalCarePlugin` and `DigitalCare = registerPlugin<DigitalCarePlugin>('DigitalCare')`:
 
 ```ts
 export type Screen = 'home' | 'short' | 'long' | 'water';
@@ -673,7 +673,7 @@ export interface State {
   setup: { notifications: boolean; battery: boolean; fullScreen: boolean };
   manufacturer: string;
 }
-export interface EyeCarePlugin {
+export interface DigitalCarePlugin {
   getState(): Promise<State>;
   saveSettings(settings: Settings): Promise<State>;
   logGlass(): Promise<State>;
@@ -687,7 +687,7 @@ export interface EyeCarePlugin {
 }
 ```
 
-- [ ] **Step 1: Implement `EyeCarePlugin`** (`@CapacitorPlugin(name = "EyeCare")`)
+- [ ] **Step 1: Implement `DigitalCarePlugin`** (`@CapacitorPlugin(name = "DigitalCare")`)
   - `load()` calls `Notifier.ensureChannels`.
   - Each `@PluginMethod` calls the matching `Engine` method, then resolves with `JSObject.fromJSONObject(Engine.state(ctx))`. `getState` calls `Engine.ensureFresh` first.
   - `saveSettings` reads `call.getData()` through `Json.read(…, new Settings())`.
@@ -706,7 +706,7 @@ export interface EyeCarePlugin {
     - An unknown page is rejected.
 
 - [ ] **Step 2: Update `MainActivity`**
-  - Call `registerPlugin(EyeCarePlugin.class)` before `super.onCreate`.
+  - Call `registerPlugin(DigitalCarePlugin.class)` before `super.onCreate`.
   - Add `applyLock(Intent)`: `wake = intent.getBooleanExtra("wake", false)`. On API 27+ it calls `setShowWhenLocked(wake)` and `setTurnScreenOn(wake)`, so normal launches clear the flags. Call it from `onCreate` and from `onNewIntent` (after `super`).
   - On API 33+, request `POST_NOTIFICATIONS` if it isn't granted.
   - Set `bridge.getWebView().getSettings().setTextZoom(Math.round(getResources().getConfiguration().fontScale * 100))`, so the layout follows the system font size.
@@ -722,7 +722,7 @@ Expected: both succeed.
 
 ```bash
 git add src/plugin.ts android/app/src/main
-git commit -m "feat: EyeCare Capacitor plugin and launch-screen handling"
+git commit -m "feat: DigitalCare Capacitor plugin and launch-screen handling"
 ```
 
 ---
@@ -734,7 +734,7 @@ git commit -m "feat: EyeCare Capacitor plugin and launch-screen handling"
 - Modify: `src/main.tsx` (render `<App/>`, import `styles.css`)
 
 **Interfaces:**
-- Consumes: `EyeCare`, `State`, `Screen` and `SystemPage` from `src/plugin.ts`.
+- Consumes: `DigitalCare`, `State`, `Screen` and `SystemPage` from `src/plugin.ts`.
 - Produces:
   - `time.ts`:
     - `useNow(): number` re-renders every 1 s.
@@ -748,8 +748,8 @@ git commit -m "feat: EyeCare Capacitor plugin and launch-screen handling"
 - [ ] **Step 1: Write `App`**
   - State: `state: State | null`, `view: View = 'home'`, `error: string | null`.
   - On mount:
-    - Call `refresh()` (`act(EyeCare.getState())`).
-    - Call `EyeCare.getLaunchScreen().then(r => setView(r.screen))`.
+    - Call `refresh()` (`act(DigitalCare.getState())`).
+    - Call `DigitalCare.getLaunchScreen().then(r => setView(r.screen))`.
     - Add the `launchScreen` listener, which sets the view and refreshes.
     - Listen for `visibilitychange`: when the page is visible, refresh.
     - Clean up the listener and handler on unmount.
@@ -788,7 +788,7 @@ Rows:
 
 Each row shows `✓` or a **Fix** button.
 
-When `manufacturer === 'vivo'`, add the four Vivo steps from spec §9 verbatim, plus `Names vary by phone version.`, an **Open app info** button (`appDetails`) and a **Done, hide these** button. That button sets `localStorage['eyecare.vivoStepsDismissed']='1'`, and both the read and the write are wrapped in try/catch. Other brands get `<a href="https://dontkillmyapp.com/">Keep reminders alive: dontkillmyapp.com</a>`, a plain link so Capacitor opens it in the browser.
+When `manufacturer === 'vivo'`, add the four Vivo steps from spec §9 verbatim, plus `Names vary by phone version.`, an **Open app info** button (`appDetails`) and a **Done, hide these** button. That button sets `localStorage['digitalcare.vivoStepsDismissed']='1'`, and both the read and the write are wrapped in try/catch. Other brands get `<a href="https://dontkillmyapp.com/">Keep reminders alive: dontkillmyapp.com</a>`, a plain link so Capacitor opens it in the browser.
 
 The card is hidden when every shown row is ✓ and the Vivo steps are dismissed or don't apply.
 
@@ -823,7 +823,7 @@ git commit -m "feat: app shell, home screen and setup card"
 - Modify: `src/App.tsx` (route `short`/`long` → `BreakScreen`, `water` → `WaterScreen`)
 
 **Interfaces:**
-- Consumes: `ScreenProps`, `View`, `Ring`, `useNow`, `fmtLeft`, `EyeCare`.
+- Consumes: `ScreenProps`, `View`, `Ring`, `useNow`, `fmtLeft`, `DigitalCare`.
 - Produces:
   - `Anim({ name, alt }: { name: 'eye' | 'stretch' | 'drink'; alt: string })` renders `<picture><source srcSet="anim/{name}.png" media="(prefers-reduced-motion: reduce)"/><img src="anim/{name}.webp" alt={alt} width="160" height="160"/></picture>`.
   - `BreakScreen(props: ScreenProps & { type: 'short' | 'long' })`
@@ -848,11 +848,11 @@ Expected: 6 files in `public/anim/` and no assertion error.
   - Title `Eye break` or `Long break`. `Anim` is `eye` with alt `Eyes looking into the distance` for short breaks, and `stretch` with alt `Person stretching` for long ones.
   - `Ring(fraction = left/total)` with the text `{fmtLeft(left)} left`, or `Break over` when `left ≤ 0`.
   - Tip copy: short `Look at something about 6 m (20 ft) away. Blink slowly.`; long `Stand up, walk around, stretch your back and neck.`
-  - **Done** → `go('home')`. **Skip** (hidden when `left ≤ 0`) → `act(EyeCare.skipBreak())`, then `go('home')`.
+  - **Done** → `go('home')`. **Skip** (hidden when `left ≤ 0`) → `act(DigitalCare.skipBreak())`, then `go('home')`.
 
 - [ ] **Step 4: Write `WaterScreen`**
 
-`Anim drink` with alt `Glass of water`, the text `{glasses} / {goal} glasses`, **Drank 1 glass** (`act(EyeCare.logGlass())`, staying on the screen) and **Done** (`go('home')`).
+`Anim drink` with alt `Glass of water`, the text `{glasses} / {goal} glasses`, **Drank 1 glass** (`act(DigitalCare.logGlass())`, staying on the screen) and **Done** (`go('home')`).
 
 - [ ] **Step 5: Build**
 
@@ -875,7 +875,7 @@ git commit -m "feat: break and water screens with self-made animations"
 - Modify: `src/App.tsx` (route `settings` → `SettingsScreen`)
 
 **Interfaces:**
-- Consumes: `ScreenProps`, `Settings`, `EyeCare.saveSettings`, `EyeCare.openSystemSettings`.
+- Consumes: `ScreenProps`, `Settings`, `DigitalCare.saveSettings`, `DigitalCare.openSystemSettings`.
 - Produces: `SettingsScreen(props: ScreenProps)`.
 
 - [ ] **Step 1: Write `SettingsScreen`**
@@ -894,7 +894,7 @@ Groups:
 - **Lock screen**: Wake screen for reminders, with the note `Shows the break screen on the lock screen.`
 - **Sound & vibration**: one button per channel, labelled `Short eye break`, `Long break`, `Break over` and `Water`. Each calls `openSystemSettings({page:'channel', channel: id})`.
 - The disclaimer, verbatim: `General guidance only. If you have a kidney or heart condition, follow your doctor’s advice on water.`
-- **Save** → `act(EyeCare.saveSettings(draft))`, then `go('home')`. **Cancel** → `go('home')`.
+- **Save** → `act(DigitalCare.saveSettings(draft))`, then `go('home')`. **Cancel** → `go('home')`.
 
 - [ ] **Step 2: Build**
 
@@ -916,8 +916,8 @@ git commit -m "feat: settings screen"
 
 - [ ] **Step 1: Build and install**
 
-Run: `.\build-apk.ps1; C:\android-sdk\platform-tools\adb install -r eyecare.apk`
-Expected: `Success`. If adb sees no device, copy `eyecare.apk` to the phone instead.
+Run: `.\build-apk.ps1; C:\android-sdk\platform-tools\adb install -r digitalcare.apk`
+Expected: `Success`. If adb sees no device, copy `digitalcare.apk` to the phone instead.
 
 - [ ] **Step 2: Setup**
 
@@ -934,9 +934,9 @@ In Settings, set short break every 1 min, short length 10 s, long break every 2 
 - Drank 1 glass from the notification with the app closed.
 - The break screen appears over the lock screen.
 - Pause / Resume, Skip and Snooze behave as described in §5.
-- With the app in the background, run `adb shell am kill com.eyecare.app`, then tap the next break notification: the break screen opens, not Home.
-- Run `adb shell am force-stop com.eyecare.app`, open the app before the next break is due and close it: the break still arrives.
-- After a Wake-screen break, press power twice: the normal lock screen appears, not EyeCare.
+- With the app in the background, run `adb shell am kill com.digitalcare.app`, then tap the next break notification: the break screen opens, not Home.
+- Run `adb shell am force-stop com.digitalcare.app`, open the app before the next break is due and close it: the break still arrives.
+- After a Wake-screen break, press power twice: the normal lock screen appears, not DigitalCare.
 - On first launch, allow notifications in the prompt: the setup card's Notifications row turns ✓ without leaving the app.
 
 - [ ] **Step 5: Restore the defaults in Settings**

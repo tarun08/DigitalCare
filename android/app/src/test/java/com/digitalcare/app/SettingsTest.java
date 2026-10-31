@@ -1,4 +1,4 @@
-package com.eyecare.app;
+package com.digitalcare.app;
 
 import static org.junit.Assert.*;
 

@@ -20,7 +20,7 @@ export interface State {
   manufacturer: string
 }
 
-export interface EyeCarePlugin {
+export interface DigitalCarePlugin {
   getState(): Promise<State>
   saveSettings(settings: Settings): Promise<State>
   logGlass(): Promise<State>
@@ -34,4 +34,4 @@ export interface EyeCarePlugin {
   addListener(event: 'appResume', cb: () => void): Promise<PluginListenerHandle>
 }
 
-export const EyeCare = registerPlugin<EyeCarePlugin>('EyeCare')
+export const DigitalCare = registerPlugin<DigitalCarePlugin>('DigitalCare')

@@ -1,4 +1,4 @@
-import { EyeCare } from './plugin'
+import { DigitalCare } from './plugin'
 import type { ScreenProps } from './App'
 import { Anim } from './Anim'
 import { Ring } from './Ring'
@@ -20,7 +20,7 @@ export function BreakScreen({ state, act, go, type }: ScreenProps & { type: 'sho
       <p>{long ? 'Stand up, walk around, stretch your back and neck.' : 'Look at something about 6 m (20 ft) away. Blink slowly.'}</p>
       <div className="row">
         <button className="primary" onClick={() => go('home')}>Done</button>
-        {left > 0 && <button onClick={() => { act(EyeCare.skipBreak()); go('home') }}>Skip</button>}
+        {left > 0 && <button onClick={() => { act(DigitalCare.skipBreak()); go('home') }}>Skip</button>}
       </div>
     </section>
   )

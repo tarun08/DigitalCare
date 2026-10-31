@@ -1,4 +1,4 @@
-package com.eyecare.app;
+package com.digitalcare.app;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;

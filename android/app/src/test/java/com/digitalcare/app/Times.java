@@ -1,4 +1,4 @@
-package com.eyecare.app;
+package com.digitalcare.app;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;

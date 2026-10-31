@@ -1,4 +1,4 @@
-package com.eyecare.app;
+package com.digitalcare.app;
 
 import android.app.AlarmManager;
 import android.app.NotificationManager;
@@ -130,7 +130,7 @@ final class Engine {
     private static Object time(long t) { return t == 0 ? JSONObject.NULL : t; }
 
     private static SharedPreferences prefs(Context c) {
-        return c.getSharedPreferences("eyecare", Context.MODE_PRIVATE);
+        return c.getSharedPreferences("digitalcare", Context.MODE_PRIVATE);
     }
 
     private static Settings settings(Context c) {

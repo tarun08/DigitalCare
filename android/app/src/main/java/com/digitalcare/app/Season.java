@@ -1,4 +1,4 @@
-package com.eyecare.app;
+package com.digitalcare.app;
 
 /** North India seasons with their daily water goal (glasses of 250 ml) and tip. */
 public enum Season {

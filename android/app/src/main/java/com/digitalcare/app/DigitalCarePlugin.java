@@ -1,4 +1,4 @@
-package com.eyecare.app;
+package com.digitalcare.app;
 
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -13,8 +13,8 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 /** Bridge between the React UI and Engine. Every method resolves with the fresh State. */
-@CapacitorPlugin(name = "EyeCare")
-public class EyeCarePlugin extends Plugin {
+@CapacitorPlugin(name = "DigitalCare")
+public class DigitalCarePlugin extends Plugin {
     private interface Action { void run(Context c) throws Exception; }
 
     @Override
@@ -27,7 +27,7 @@ public class EyeCarePlugin extends Plugin {
 
     @PluginMethod
     public void saveSettings(PluginCall call) {
-        respond(call, c -> Engine.saveSettings(c, Json.read(call.getData(), new com.eyecare.app.Settings())));
+        respond(call, c -> Engine.saveSettings(c, Json.read(call.getData(), new com.digitalcare.app.Settings())));
     }
 
     @PluginMethod

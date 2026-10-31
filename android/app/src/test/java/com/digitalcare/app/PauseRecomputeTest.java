@@ -1,7 +1,7 @@
-package com.eyecare.app;
+package com.digitalcare.app;
 
-import static com.eyecare.app.Scheduler.Kind.*;
-import static com.eyecare.app.Times.*;
+import static com.digitalcare.app.Scheduler.Kind.*;
+import static com.digitalcare.app.Times.*;
 import static org.junit.Assert.*;
 
 import org.junit.Before;

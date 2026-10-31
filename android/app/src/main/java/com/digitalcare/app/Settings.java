@@ -1,4 +1,4 @@
-package com.eyecare.app;
+package com.digitalcare.app;
 
 import java.time.LocalTime;
 import java.util.Arrays;
