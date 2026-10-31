@@ -15,6 +15,8 @@ final class Scheduler {
 
     private Scheduler() {}
 
+    enum Kind { BREAK, BREAK_END, WATER, DAY_START, RESUME }
+
     /** One day's wake window; end is exclusive and falls on the next day when sleep <= wake. */
     static final class Window {
         final LocalDate date;
@@ -54,8 +56,72 @@ final class Scheduler {
         return d.snoozed ? d.breakLong : (d.breakCount + 1) % s.longEveryN == 0;
     }
 
+    static void recompute(Settings s, DayState d, long now, ZoneId z) {
+        Window w = windowAt(s, now, z);
+        if (w != null && w.date.toEpochDay() != d.dayDate) { // matched by date so a wake-time change keeps today
+            d.glasses = 0;
+            d.breakCount = 0;
+            d.dayDate = w.date.toEpochDay();
+            d.waterFirst = false;
+        }
+        d.breakEndAt = 0;
+        d.snoozed = false;
+        if (d.pausedUntil > now) {
+            d.nextBreakAt = 0;
+            d.nextWaterAt = 0;
+        } else {
+            d.pausedUntil = 0;
+            d.nextBreakAt = breakAt(s, w, now + s.shortEveryMin * MIN);
+            d.nextWaterAt = waterNext(s, d, now, z);
+        }
+        finish(s, d, now, z);
+    }
+
+    /** minutes == null pauses until the next wake. */
+    static void pause(Settings s, DayState d, long now, ZoneId z, Integer minutes) {
+        d.pausedUntil = minutes == null ? nextWake(s, now, z) : now + minutes * MIN;
+        d.nextBreakAt = 0;
+        d.breakEndAt = 0;
+        d.nextWaterAt = 0;
+        d.snoozed = false;
+        finish(s, d, now, z);
+    }
+
+    static void resume(Settings s, DayState d, long now, ZoneId z) {
+        d.pausedUntil = 0;
+        recompute(s, d, now, z);
+    }
+
+    /** Alarm time for each kind, 0 = cancel. DAY_START is armed only when nothing else is. */
+    static long alarmAt(Kind k, DayState d) {
+        switch (k) {
+            case BREAK: return d.nextBreakAt;
+            case BREAK_END: return d.breakEndAt;
+            case WATER: return d.nextWaterAt;
+            case RESUME: return d.pausedUntil > 0 && d.pausedUntil < d.nextDayStartAt ? d.pausedUntil : 0;
+            default:
+                boolean idle = d.nextBreakAt == 0 && d.breakEndAt == 0 && d.nextWaterAt == 0 && alarmAt(Kind.RESUME, d) == 0;
+                return idle ? d.nextDayStartAt : 0;
+        }
+    }
+
+    /** True when nothing is armed (first launch) or an armed alarm is over a minute overdue (lost). */
+    static boolean stale(DayState d, long now) {
+        boolean armed = false;
+        for (Kind k : Kind.values()) {
+            long t = alarmAt(k, d);
+            if (t > 0 && t < now - MIN) return true;
+            armed |= t > 0;
+        }
+        return !armed;
+    }
+
     static void onDayStart(Settings s, DayState d, long now, ZoneId z) {
         Window w = windowAt(s, now, z);
+        if (w == null) { // stale alarm, e.g. wake time changed after it was set
+            recompute(s, d, now, z);
+            return;
+        }
         d.glasses = 0;
         d.breakCount = 0;
         d.dayDate = w.date.toEpochDay();
