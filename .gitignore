@@ -1,4 +1,13 @@
 node_modules/
 dist/
-digitalcare.apk
+*.apk
 .superpowers/
+*.jks
+*.keystore
+.env
+.env.*
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
