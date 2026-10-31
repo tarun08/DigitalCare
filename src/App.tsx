@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { EyeCare, type Screen, type State } from './plugin'
+import { BreakScreen } from './BreakScreen'
 import { Home } from './Home'
+import { WaterScreen } from './WaterScreen'
 
 export type View = Screen | 'settings'
 export interface ScreenProps { state: State; act: (p: Promise<State>) => void; go: (v: View) => void }
@@ -46,7 +48,10 @@ export function App() {
   return (
     <main>
       {error && <p className="error" role="alert">{error}</p>}
-      {view === 'home' ? <Home {...props} /> : <Stub view={view} go={setView} />}
+      {view === 'short' || view === 'long' ? <BreakScreen {...props} type={view} />
+        : view === 'water' ? <WaterScreen {...props} />
+        : view === 'home' ? <Home {...props} />
+        : <Stub view={view} go={setView} />}
     </main>
   )
 }
