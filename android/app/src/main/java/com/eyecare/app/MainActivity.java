@@ -23,12 +23,24 @@ public class MainActivity extends BridgeActivity {
     /** Also runs for the launch intent: BridgeActivity.load() calls onNewIntent(getIntent()). */
     @Override
     protected void onNewIntent(Intent intent) {
+        // getLaunchScreen reads getIntent(): keep it current when a notification tap relaunches a killed process.
+        setIntent(intent);
         super.onNewIntent(intent);
         // Show over the lock screen only for full-screen reminder launches; normal launches clear it.
         boolean wake = intent.getBooleanExtra("wake", false);
         if (Build.VERSION.SDK_INT >= 27) {
             setShowWhenLocked(wake);
             setTurnScreenOn(wake);
+        }
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        // Once the reminder is out of sight, the power button shows the normal lock screen again.
+        if (Build.VERSION.SDK_INT >= 27) {
+            setShowWhenLocked(false);
+            setTurnScreenOn(false);
         }
     }
 }

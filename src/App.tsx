@@ -24,13 +24,12 @@ export function App() {
     const refresh = () => act(EyeCare.getState())
     refresh()
     EyeCare.getLaunchScreen().then(r => setView(r.screen), () => {})
-    const handle = EyeCare.addListener('launchScreen', e => { setView(e.screen); refresh() })
-    const onVisible = () => { if (document.visibilityState === 'visible') refresh() }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => {
-      handle.then(h => h.remove())
-      document.removeEventListener('visibilitychange', onVisible)
-    }
+    const handles = [
+      EyeCare.addListener('launchScreen', e => { setView(e.screen); refresh() }),
+      // Native resume, not visibilitychange: it also fires after the permission and battery dialogs.
+      EyeCare.addListener('appResume', refresh),
+    ]
+    return () => { handles.forEach(h => h.then(x => x.remove())) }
   }, [act])
 
   // Alarms change state in the background; refresh once the next event time passes so an open screen stays true.

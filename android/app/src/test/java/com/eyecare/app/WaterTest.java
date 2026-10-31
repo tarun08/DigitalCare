@@ -39,6 +39,23 @@ public class WaterTest {
     }
 
     @Test
+    public void lateWaterAfterCutoffShowsNothing() {        // spec §5.3: no reminder once now >= cutoff
+        Scheduler.onDayStart(s, d, mon("07:00"), Z);
+        d.nextWaterAt = mon("21:20");
+        assertFalse(Scheduler.onWater(s, d, mon("22:40"), Z));
+        assertEquals(0, d.nextWaterAt);
+    }
+
+    @Test
+    public void lateOvernightWaterStartsTheNewDayInstead() {
+        Scheduler.onDayStart(s, d, mon("07:00"), Z);
+        Scheduler.logGlass(s, d, mon("08:00"), Z);
+        assertFalse(Scheduler.onWater(s, d, at("2026-11-03T07:30"), Z));   // held overnight, delivered Tuesday
+        assertEquals(0, d.glasses);
+        assertTrue(d.nextWaterAt > at("2026-11-03T07:30"));
+    }
+
+    @Test
     public void lateWaterAfterSleepShowsNothing() {        // Review Focus 1
         Scheduler.onDayStart(s, d, mon("07:00"), Z);
         assertFalse(Scheduler.onWater(s, d, mon("23:10"), Z));

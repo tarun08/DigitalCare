@@ -116,9 +116,16 @@ final class Scheduler {
         return !armed;
     }
 
+    /** False for an alarm no longer armed at or before now: it was in flight when Skip/Pause/Save re-armed it. */
+    static boolean due(Kind k, DayState d, long now) {
+        long t = alarmAt(k, d);
+        return t != 0 && t <= now;
+    }
+
     static void onDayStart(Settings s, DayState d, long now, ZoneId z) {
         Window w = windowAt(s, now, z);
-        if (w == null) { // stale alarm, e.g. wake time changed after it was set
+        // Stale alarm (wake changed after it was set), or today already started (wake moved later, clock set back).
+        if (w == null || w.date.toEpochDay() == d.dayDate) {
             recompute(s, d, now, z);
             return;
         }
@@ -138,6 +145,7 @@ final class Scheduler {
     /** Returns true when the break should be shown; a late alarm outside wake hours shows nothing. */
     static boolean onBreak(Settings s, DayState d, long now, ZoneId z) {
         Window w = windowAt(s, now, z);
+        if (newDay(s, d, w, now, z)) return false;
         boolean show = w != null && s.breaksOn;
         if (show) {
             if (!d.snoozed) {
@@ -153,8 +161,10 @@ final class Scheduler {
     }
 
     static void onBreakEnd(Settings s, DayState d, long now, ZoneId z) {
+        Window w = windowAt(s, now, z);
+        if (newDay(s, d, w, now, z)) return;
         d.breakEndAt = 0;
-        d.nextBreakAt = breakAt(s, windowAt(s, now, z), now + s.shortEveryMin * MIN);
+        d.nextBreakAt = breakAt(s, w, now + s.shortEveryMin * MIN);
         finish(s, d, now, z);
     }
 
@@ -172,7 +182,9 @@ final class Scheduler {
 
     /** Returns true when the reminder should be shown; an ignored reminder comes back one interval later. */
     static boolean onWater(Settings s, DayState d, long now, ZoneId z) {
-        boolean show = windowAt(s, now, z) != null && s.waterOn;
+        Window w = windowAt(s, now, z);
+        if (newDay(s, d, w, now, z)) return false;
+        boolean show = w != null && s.waterOn && now < cutoff(s, w);
         if (show) d.waterFirst = false;
         d.nextWaterAt = show ? waterNext(s, d, now, z) : 0;
         finish(s, d, now, z);
@@ -197,6 +209,16 @@ final class Scheduler {
                 : s.customEveryMin * MIN;
         long next = now + interval;
         return next > cutoff ? 0 : next;
+    }
+
+    /**
+     * An alarm firing in a window whose day never started (held overnight, back-to-back windows)
+     * starts that day from now instead of continuing yesterday's counts.
+     */
+    private static boolean newDay(Settings s, DayState d, Window w, long now, ZoneId z) {
+        if (w == null || w.date.toEpochDay() == d.dayDate) return false;
+        recompute(s, d, now, z);
+        return true;
     }
 
     private static long breakAt(Settings s, Window w, long t) {

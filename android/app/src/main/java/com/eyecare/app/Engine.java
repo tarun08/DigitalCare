@@ -20,14 +20,13 @@ import org.json.JSONObject;
 final class Engine {
     private Engine() {}
 
-    /** Recomputes when nothing is armed (first launch) or an alarm was lost. */
+    /** Recomputes when nothing is armed (first launch) or an alarm was lost, and always re-arms. */
     static synchronized void ensureFresh(Context c) {
         Settings s = settings(c);
         DayState d = day(c);
         long now = System.currentTimeMillis();
-        if (!Scheduler.stale(d, now)) return;
-        Scheduler.recompute(s, d, now, ZoneId.systemDefault());
-        commit(c, s, d);
+        if (Scheduler.stale(d, now)) Scheduler.recompute(s, d, now, ZoneId.systemDefault());
+        commit(c, s, d); // a force-stop or a blocked boot broadcast cancels alarms without making the state stale
     }
 
     static synchronized void recompute(Context c) { run(c, Scheduler::recompute); }
@@ -59,6 +58,10 @@ final class Engine {
         DayState d = day(c);
         long now = System.currentTimeMillis();
         ZoneId z = ZoneId.systemDefault();
+        if (!Scheduler.due(k, d, now)) { // already handled or rescheduled while this alarm was in flight
+            commit(c, s, d);
+            return;
+        }
         switch (k) {
             case BREAK:
                 if (Scheduler.onBreak(s, d, now, z)) Notifier.postBreak(c, d.breakLong, d.breakEndAt, s.wakeScreen);

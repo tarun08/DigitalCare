@@ -82,6 +82,27 @@ public class BreakTest {
     }
 
     @Test
+    public void lateOvernightBreakStartsTheNewDayInstead() {     // e.g. Vivo held the 22:40 alarm until morning
+        Scheduler.onDayStart(s, d, mon("07:00"), Z);
+        for (int i = 0; i < 8; i++) Scheduler.logGlass(s, d, mon("08:00"), Z);   // Monday's goal met
+        assertFalse(Scheduler.onBreak(s, d, at("2026-11-03T07:30"), Z));
+        assertEquals(0, d.glasses);
+        assertEquals(at("2026-11-03T07:50"), d.nextBreakAt);
+        assertTrue(d.nextWaterAt > 0);                                         // water reminders resume
+    }
+
+    @Test
+    public void breakEndingInTheNextWindowStartsTheNewDay() {
+        s.weekdaySleep = "07:00";                                  // sleep == wake: back-to-back 24-hour windows
+        Scheduler.onDayStart(s, d, mon("07:00"), Z);
+        Scheduler.logGlass(s, d, mon("08:00"), Z);
+        d.breakCount = 2;
+        Scheduler.onBreak(s, d, at("2026-11-03T06:59:40"), Z);     // long break runs past Tuesday's wake
+        Scheduler.onBreakEnd(s, d, d.breakEndAt, Z);
+        assertEquals(0, d.glasses);
+    }
+
+    @Test
     public void breaksOffSchedulesNone() {
         s.breaksOn = false;
         Scheduler.onDayStart(s, d, mon("07:00"), Z);

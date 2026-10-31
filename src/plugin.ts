@@ -31,6 +31,7 @@ export interface EyeCarePlugin {
   openSystemSettings(opts: { page: SystemPage; channel?: string }): Promise<void>
   getLaunchScreen(): Promise<{ screen: Screen }>
   addListener(event: 'launchScreen', cb: (e: { screen: Screen }) => void): Promise<PluginListenerHandle>
+  addListener(event: 'appResume', cb: () => void): Promise<PluginListenerHandle>
 }
 
 export const EyeCare = registerPlugin<EyeCarePlugin>('EyeCare')

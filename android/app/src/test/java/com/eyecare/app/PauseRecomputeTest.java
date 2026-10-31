@@ -96,6 +96,38 @@ public class PauseRecomputeTest {
     }
 
     @Test
+    public void wakeMovedLaterKeepsGlasses() {                   // Review Focus 2, final review
+        Scheduler.logGlass(s, d, mon("07:20"), Z);
+        Scheduler.logGlass(s, d, mon("07:40"), Z);
+        s.weekdayWake = "08:00";
+        Scheduler.recompute(s, d, mon("07:45"), Z);               // settings saved before the new wake time
+        assertEquals(mon("08:00"), Scheduler.alarmAt(DAY_START, d));
+        Scheduler.onDayStart(s, d, mon("08:00"), Z);
+        assertEquals(2, d.glasses); assertFalse(d.waterFirst);
+        assertEquals(mon("08:20"), d.nextBreakAt);
+    }
+
+    @Test
+    public void wakeMovedLaterKeepsPauseUntilTomorrow() {        // Review Focus 5, final review
+        Scheduler.pause(s, d, mon("07:30"), Z, null);
+        s.weekdayWake = "08:00";
+        Scheduler.recompute(s, d, mon("07:45"), Z);
+        Scheduler.onDayStart(s, d, mon("08:00"), Z);
+        assertEquals(at("2026-11-03T07:00"), d.pausedUntil);
+        assertEquals(0, d.nextBreakAt); assertEquals(0, d.nextWaterAt);
+    }
+
+    @Test
+    public void alarmIsDueOnlyWhileArmedAndReached() {           // final review: re-arming on app open must not double-fire
+        assertFalse(Scheduler.due(BREAK, d, mon("07:19")));
+        assertTrue(Scheduler.due(BREAK, d, mon("07:20")));
+        Scheduler.skip(s, d, mon("07:20"), Z);                    // the Skip button handled it first
+        assertFalse(Scheduler.due(BREAK, d, mon("07:20:01")));    // so the in-flight 07:20 alarm is ignored
+        Scheduler.pause(s, d, mon("07:21"), Z, 30);
+        assertFalse(Scheduler.due(WATER, d, mon("07:25")));       // nothing fires during a pause
+    }
+
+    @Test
     public void staleDetection() {
         assertTrue(Scheduler.stale(new DayState(), mon("12:00")));    // never started
         assertFalse(Scheduler.stale(d, mon("07:05")));

@@ -57,6 +57,12 @@ public class EyeCarePlugin extends Plugin {
         if (screen != null) notifyListeners("launchScreen", new JSObject().put("screen", screen));
     }
 
+    /** Also fires after system dialogs (permission, battery), which don't trigger the WebView's visibilitychange. */
+    @Override
+    protected void handleOnResume() {
+        notifyListeners("appResume", new JSObject());
+    }
+
     @PluginMethod
     public void openSystemSettings(PluginCall call) {
         String page = call.getString("page", "");
