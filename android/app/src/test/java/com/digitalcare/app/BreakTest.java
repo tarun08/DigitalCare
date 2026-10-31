@@ -32,6 +32,17 @@ public class BreakTest {
     }
 
     @Test
+    public void everyNthBreakIsLongForAnyN() {
+        s.longEveryN = 7; s.clamp();                                  // the old cap of 6 would make the 6th break long
+        Scheduler.onDayStart(s, d, mon("07:00"), Z);
+        for (int i = 1; i <= 14; i++) {
+            assertTrue(Scheduler.onBreak(s, d, d.nextBreakAt, Z));
+            assertEquals("break " + i, i % 7 == 0, d.breakLong);
+            Scheduler.onBreakEnd(s, d, d.breakEndAt, Z);
+        }
+    }
+
+    @Test
     public void breakLengthAndNextBreakAfterEnd() {
         Scheduler.onDayStart(s, d, mon("07:00"), Z);
         Scheduler.onBreak(s, d, mon("07:20"), Z);
@@ -93,7 +104,7 @@ public class BreakTest {
 
     @Test
     public void breakEndingInTheNextWindowStartsTheNewDay() {
-        s.weekdaySleep = "07:00";                                  // sleep == wake: back-to-back 24-hour windows
+        weekdays(s, "07:00", "07:00");                                // sleep == wake: back-to-back 24-hour windows
         Scheduler.onDayStart(s, d, mon("07:00"), Z);
         Scheduler.logGlass(s, d, mon("08:00"), Z);
         d.breakCount = 2;

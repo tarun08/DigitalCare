@@ -20,14 +20,39 @@ public class DayWindowTest {
     }
 
     @Test
-    public void customWeekendDays() {
-        s.weekendDays = new int[]{5, 6}; // Fri, Sat: Sunday becomes a weekday
-        assertEquals(at("2026-11-08T07:00"), Scheduler.windowAt(s, at("2026-11-08T12:00"), Z).start);
+    public void eachDayHasItsOwnHours() {
+        day(s, 5, "10:00", "02:00");                                   // Friday: late start, sleeps after midnight
+        Scheduler.Window fri = Scheduler.windowAt(s, at("2026-11-06T12:00"), Z);
+        assertEquals(at("2026-11-06T10:00"), fri.start); assertEquals(at("2026-11-07T02:00"), fri.end);
+        assertEquals(at("2026-11-05T07:00"), Scheduler.windowAt(s, at("2026-11-05T12:00"), Z).start);   // Thursday unchanged
+        assertEquals(at("2026-11-07T08:30"), Scheduler.windowAt(s, at("2026-11-07T12:00"), Z).start);   // Saturday unchanged
+    }
+
+    @Test
+    public void aDayOffHasNoWindowAndNextWakeSkipsIt() {
+        s.dayOn[1] = 0;                                                // Tuesday off
+        assertNull(Scheduler.windowAt(s, at("2026-11-03T12:00"), Z));
+        assertEquals(at("2026-11-04T07:00"), Scheduler.nextWake(s, mon("23:30"), Z));   // Monday night -> Wednesday
+    }
+
+    @Test
+    public void aLateSleepIntoAnOffDayStillCounts() {
+        day(s, 1, "07:00", "01:00");                                   // Monday sleeps at 01:00 on Tuesday
+        s.dayOn[1] = 0;
+        assertNotNull(Scheduler.windowAt(s, at("2026-11-03T00:30"), Z));
+        assertNull(Scheduler.windowAt(s, at("2026-11-03T01:00"), Z));
+    }
+
+    @Test
+    public void everyDayOffMeansNothingToWakeFor() {
+        s.dayOn = new int[7];
+        assertNull(Scheduler.windowAt(s, mon("12:00"), Z));
+        assertEquals(0, Scheduler.nextWake(s, mon("12:00"), Z));
     }
 
     @Test
     public void sleepAfterMidnight() {
-        s.weekdaySleep = "00:30";
+        weekdays(s, "07:00", "00:30");
         Scheduler.Window w = Scheduler.windowAt(s, at("2026-11-03T00:10"), Z);
         assertEquals(LocalDate.parse("2026-11-02"), w.date);
         assertEquals(at("2026-11-03T00:30"), w.end);

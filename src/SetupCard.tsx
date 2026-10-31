@@ -14,6 +14,7 @@ export function SetupCard({ state }: { state: State }) {
     ['Notifications', state.setup.notifications, 'channel'],
     ['Battery optimization off', state.setup.battery, 'battery'],
   ]
+  if (state.settings.screenOn) rows.push([state.setup.phoneUse ? 'Phone-use reminder running' : 'Phone-use reminder was stopped', state.setup.phoneUse, 'battery'])
   if (state.settings.wakeScreen) rows.push(['Full-screen alerts', state.setup.fullScreen, 'fullScreen'])
   const vivo = state.manufacturer === 'vivo'
   if (rows.every(([, ok]) => ok) && (!vivo || dismissed)) return null
@@ -28,7 +29,7 @@ export function SetupCard({ state }: { state: State }) {
       <h2>Setup</h2>
       <ul className="checks">
         {rows.map(([label, ok, page]) => (
-          <li key={page}>
+          <li key={label}>
             <span>{label}</span>
             {ok ? <span className="ok" aria-label="done">✓</span> : <button onClick={() => open(page)}>Fix</button>}
           </li>

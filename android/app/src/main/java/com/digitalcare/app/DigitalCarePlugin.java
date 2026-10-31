@@ -19,7 +19,7 @@ public class DigitalCarePlugin extends Plugin {
 
     @Override
     public void load() {
-        Notifier.ensureChannels(getContext());
+        Engine.ensureChannels(getContext());
     }
 
     @PluginMethod
@@ -32,6 +32,15 @@ public class DigitalCarePlugin extends Plugin {
 
     @PluginMethod
     public void logGlass(PluginCall call) { respond(call, Engine::logGlass); }
+
+    @PluginMethod
+    public void removeGlass(PluginCall call) { respond(call, Engine::removeGlass); }
+
+    @PluginMethod
+    public void testAlert(PluginCall call) {
+        Engine.testAlert(getContext(), call.getString("alert", ""), call.getInt("sound", 0), call.getBoolean("popup", true));
+        call.resolve();
+    }
 
     @PluginMethod
     public void pause(PluginCall call) { respond(call, c -> Engine.pause(c, call.getInt("minutes"))); }

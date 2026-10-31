@@ -19,7 +19,7 @@ An Android app (sideloaded APK, user's Vivo phone) that protects eyes and hydrat
 
 ## 2. Scope
 
-**In v1:** short and long eye breaks · start and break-over signals · Skip / Snooze · weekday/weekend wake and sleep times · Pause · water reminders with glass counter, season goal and smart spacing · custom water mode · per-type sound/vibration via Android settings · optional silent screen wake that shows the break screen on the lock screen · built-in animations · night light and Extra Dim shortcuts · setup card with Vivo steps.
+**In v1:** short and long eye breaks · start and break-over signals · Skip / Snooze · wake and sleep times for each of the 7 days (a day can be off) · Pause · water reminders with glass counter, season goal and smart spacing · custom water mode · per-type sound/vibration via Android settings · optional silent screen wake that shows the break screen on the lock screen · built-in animations · night light and Extra Dim shortcuts · setup card with Vivo steps.
 
 **Later phases:**
 
@@ -61,7 +61,9 @@ Native engine (Java)
 
 ### 5.1 Day window
 
-- There are two sets of wake and sleep times: weekday and weekend. Weekend days are selectable (default Sat, Sun).
+- Each of the 7 days has its own wake and sleep time and can be switched off (no reminders that day). At least one day stays on.
+- Settings saved by the first version (weekday and weekend times, selectable weekend days) are converted to the 7 days on first read.
+- A window that runs past midnight belongs to the day it started on. If it overlaps the next day's window, the next day's window wins from its wake time.
 - If sleep ≤ wake (for example sleep 00:30), the window ends on the next calendar day.
 - `DAY_START` fires at wake time. It resets glasses and the break counter, clears "pause until tomorrow", sets next break = wake + short interval, and sets next water = wake + 10 min.
 - Nothing fires after sleep time. The only alarm armed then is `DAY_START` for the next wake.
@@ -69,7 +71,7 @@ Native engine (Java)
 ### 5.2 Eye breaks
 
 - Break counter `n` increments each time a break fires. A snoozed re-fire does not increment it.
-- The break is **long** when `n % N == 0`. N defaults to 3: with a 20-min short interval that's a long break every 60 min. The long-break setting is shown in minutes (N × short interval).
+- The break is **long** when `n % N == 0`. N defaults to 3: with a 20-min short interval that's a long break every 60 min. N is typed as any whole number from 2 to 99 (a long break can only fall on a regular break slot, so it is always a whole number of short intervals); the screen shows the minutes it works out to (N × short interval).
 - When a break fires:
   - Post the break notification with a countdown (Android chronometer), **Skip** and **Snooze 5 min** buttons.
   - Set `BREAK_END` at now + duration (20 s short, 5 min long).
@@ -87,7 +89,7 @@ Native engine (Java)
 - **Smart mode (default):**
   - Goal comes from the season table below.
   - Spacing: `interval = clamp((cutoff − now) / glassesLeft, 30 min, 120 min)`, where `cutoff = sleep − stopBeforeSleep` (default 90 min).
-  - No reminder if `now ≥ cutoff`, if `glassesLeft ≤ 0`, or if the next time would be after the cutoff.
+  - No reminder if `now ≥ cutoff`, if `glassesLeft ≤ 0`, or if the next time would be after the cutoff. When the next time would be after the cutoff, one last reminder is set 10 min before the cutoff instead, if that is still ahead (decided after v1: the 30-min gap should not cost a reminder).
 - **Custom mode** (smart switched off): uses your own goal and a fixed "every X min" interval, with the same cutoff.
 - The first reminder of the day is wake + 10 min, with the text "Start your day with 1–2 glasses".
 - **Drank 1 glass** (notification button, Home or water screen): glasses + 1, then the next reminder is recomputed from now.
@@ -133,12 +135,12 @@ Channels have fixed ids and are never recreated, so the user's choices in Androi
 
 | Setting | Default | Range |
 |---|---|---|
-| Weekday wake / sleep | 07:00 / 23:00 | any time |
-| Weekend wake / sleep | 08:30 / 23:30 | any time |
-| Weekend days | Sat, Sun | any days |
+| Mon–Fri wake / sleep | 07:00 / 23:00 | any time |
+| Sat, Sun wake / sleep | 08:30 / 23:30 | any time |
+| Day on | all 7 days | any days, at least one |
 | Eye breaks on | on | on/off |
 | Short break every / length | 20 min / 20 s | 1–60 min / 10–60 s |
-| Long break every / length | 60 min (N = 3) / 5 min | N = 2–6 / 1–15 min |
+| Long break every / length | 60 min (N = 3) / 5 min | N = 2–99 / 1–15 min |
 | Water on | on | on/off |
 | Smart water | on | on/off |
 | Custom goal / every | 8 glasses / 60 min | 1–20 / 1–180 min |
@@ -236,7 +238,7 @@ Other brands get a single link to dontkillmyapp.com.
 
 **Scheduler unit tests** (JUnit, `gradlew test`, no phone needed):
 
-1. Weekday vs weekend wake/sleep selection, including custom weekend days.
+1. Each day uses its own wake/sleep time, a day that is off has no window, and the next wake skips off days.
 2. A sleep time after midnight (00:30) gives the correct window.
 3. Every Nth break is long; snooze keeps the type and doesn't increment the counter; skip moves to the next break.
 4. The next break = break end + short interval.

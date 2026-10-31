@@ -8,9 +8,9 @@ import org.junit.Test;
 public class JsonTest {
     @Test
     public void roundTripsAndKeepsDefaultsForMissingOrNull() throws Exception {
-        Settings s = new Settings(); s.weekendDays = new int[]{5}; s.smartWater = false; s.weekdayWake = "06:15";
+        Settings s = new Settings(); s.dayWake[0] = 375; s.dayOn[6] = 0; s.smartWater = false;
         Settings back = Json.read(Json.write(s), new Settings());
-        assertArrayEquals(new int[]{5}, back.weekendDays); assertFalse(back.smartWater); assertEquals("06:15", back.weekdayWake);
+        assertEquals(375, back.dayWake[0]); assertEquals(0, back.dayOn[6]); assertFalse(back.smartWater);
 
         JSONObject fromForm = new JSONObject().put("shortEveryMin", 25.0).put("longMin", JSONObject.NULL); // Review Focus 4
         Settings p = Json.read(fromForm, new Settings());

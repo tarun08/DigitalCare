@@ -27,7 +27,7 @@ public class PauseRecomputeTest {
 
     @Test
     public void pauseUntilTomorrowAfterMidnightMeansNextWake() {
-        s.weekdaySleep = "00:30";
+        weekdays(s, "07:00", "00:30");
         Scheduler.pause(s, d, at("2026-11-03T00:10"), Z, null);
         assertEquals(at("2026-11-03T07:00"), d.pausedUntil);
     }
@@ -66,7 +66,7 @@ public class PauseRecomputeTest {
 
     @Test
     public void staleDayStartRecomputes() {
-        s.weekdayWake = "09:00";                       // DAY_START was armed for 07:00, window now starts 09:00
+        weekdays(s, "09:00", "23:00");                       // DAY_START was armed for 07:00, window now starts 09:00
         Scheduler.onDayStart(s, d, at("2026-11-03T07:00"), Z);
         assertEquals(at("2026-11-03T09:00"), Scheduler.alarmAt(DAY_START, d));
         assertEquals(0, d.nextBreakAt);
@@ -74,7 +74,7 @@ public class PauseRecomputeTest {
 
     @Test
     public void settingsChangeMidDayKeepsGlasses() {           // Review Focus 2
-        d.glasses = 4; s.weekdayWake = "06:30";
+        d.glasses = 4; weekdays(s, "06:30", "23:00");
         Scheduler.recompute(s, d, mon("12:00"), Z);
         assertEquals(4, d.glasses);
     }
@@ -99,7 +99,7 @@ public class PauseRecomputeTest {
     public void wakeMovedLaterKeepsGlasses() {                   // Review Focus 2, final review
         Scheduler.logGlass(s, d, mon("07:20"), Z);
         Scheduler.logGlass(s, d, mon("07:40"), Z);
-        s.weekdayWake = "08:00";
+        weekdays(s, "08:00", "23:00");
         Scheduler.recompute(s, d, mon("07:45"), Z);               // settings saved before the new wake time
         assertEquals(mon("08:00"), Scheduler.alarmAt(DAY_START, d));
         Scheduler.onDayStart(s, d, mon("08:00"), Z);
@@ -110,7 +110,7 @@ public class PauseRecomputeTest {
     @Test
     public void wakeMovedLaterKeepsPauseUntilTomorrow() {        // Review Focus 5, final review
         Scheduler.pause(s, d, mon("07:30"), Z, null);
-        s.weekdayWake = "08:00";
+        weekdays(s, "08:00", "23:00");
         Scheduler.recompute(s, d, mon("07:45"), Z);
         Scheduler.onDayStart(s, d, mon("08:00"), Z);
         assertEquals(at("2026-11-03T07:00"), d.pausedUntil);

@@ -11,7 +11,7 @@ final class Scheduler {
     static final long MIN = 60_000;
     static final long SNOOZE_MS = 5 * MIN;
     private static final long FIRST_WATER_MS = 10 * MIN;
-    private static final long WATER_MIN_MS = 30 * MIN, WATER_MAX_MS = 120 * MIN;
+    private static final long WATER_MIN_MS = 30 * MIN, WATER_MAX_MS = 120 * MIN, LAST_CALL_MS = 10 * MIN;
 
     private Scheduler() {}
 
@@ -21,11 +21,13 @@ final class Scheduler {
     static final class Window {
         final LocalDate date;
         final long start, end;
+        final ZoneId zone;
 
-        Window(LocalDate date, long start, long end) {
+        Window(LocalDate date, long start, long end, ZoneId zone) {
             this.date = date;
             this.start = start;
             this.end = end;
+            this.zone = zone;
         }
     }
 
@@ -33,15 +35,19 @@ final class Scheduler {
         LocalDate today = Instant.ofEpochMilli(now).atZone(z).toLocalDate();
         for (LocalDate date : new LocalDate[]{today, today.minusDays(1)}) {
             Window w = window(s, date, z);
-            if (w.start <= now && now < w.end) return w;
+            if (w != null && w.start <= now && now < w.end) return w;
         }
         return null;
     }
 
+    /** The next wake time after now, skipping days that are off; 0 when every day is off. */
     static long nextWake(Settings s, long now, ZoneId z) {
         LocalDate today = Instant.ofEpochMilli(now).atZone(z).toLocalDate();
-        long wake = window(s, today, z).start;
-        return wake > now ? wake : window(s, today.plusDays(1), z).start;
+        for (int i = 0; i <= 7; i++) {
+            Window w = window(s, today.plusDays(i), z);
+            if (w != null && w.start > now) return w.start;
+        }
+        return 0;
     }
 
     static Season season(long now, ZoneId z) {
@@ -137,7 +143,7 @@ final class Scheduler {
         d.snoozed = false;
         d.nextBreakAt = breakAt(s, w, now + s.shortEveryMin * MIN);
         d.waterFirst = true;
-        long first = now + FIRST_WATER_MS;
+        long first = s.waterCustom ? Math.max(now, waterStart(s, w)) : now + FIRST_WATER_MS;
         d.nextWaterAt = s.waterOn && first <= cutoff(s, w) ? first : 0;
         finish(s, d, now, z);
     }
@@ -198,6 +204,23 @@ final class Scheduler {
         finish(s, d, now, z);
     }
 
+    /** Takes back a mis-tapped glass. A reminder already scheduled stays; reminders that stopped at the goal restart. */
+    static void removeGlass(Settings s, DayState d, long now, ZoneId z) {
+        if (d.glasses > 0) d.glasses--;
+        if (d.nextWaterAt == 0 && d.pausedUntil <= now) d.nextWaterAt = waterNext(s, d, now, z);
+        finish(s, d, now, z);
+    }
+
+    /** Phone-use reminders only inside the wake window, and never while paused or switched off. */
+    static boolean screenReminderAllowed(Settings s, DayState d, long now, ZoneId z) {
+        return s.screenOn && d.pausedUntil <= now && windowAt(s, now, z) != null;
+    }
+
+    /** The service ran before, is switched on, and is down now: the user should hear that it was stopped. */
+    static boolean screenStopped(Settings s, boolean ranBefore, boolean runningNow) {
+        return s.screenOn && ranBefore && !runningNow;
+    }
+
     static long waterNext(Settings s, DayState d, long now, ZoneId z) {
         Window w = windowAt(s, now, z);
         if (!s.waterOn || w == null) return 0;
@@ -207,8 +230,11 @@ final class Scheduler {
         long interval = s.smartWater
                 ? Math.max(WATER_MIN_MS, Math.min(WATER_MAX_MS, (cutoff - now) / left))
                 : s.customEveryMin * MIN;
-        long next = now + interval;
-        return next > cutoff ? 0 : next;
+        long start = s.waterCustom ? waterStart(s, w) : w.start;
+        long next = Math.max(now + interval, start);
+        if (next < cutoff) return next;
+        long last = cutoff - LAST_CALL_MS; // the gap does not fit: one last reminder shortly before the stop
+        return last > now && last >= start ? last : 0;
     }
 
     /**
@@ -225,21 +251,39 @@ final class Scheduler {
         return s.breaksOn && w != null && t < w.end ? t : 0;
     }
 
-    private static long cutoff(Settings s, Window w) {
-        return w.end - s.stopBeforeSleepMin * MIN;
+    /** When water reminders end: the chosen stop time (after midnight if it is before wake) or sleep minus the margin; never after sleep. */
+    static long cutoff(Settings s, Window w) {
+        if (!s.waterCustom) return w.end - s.stopBeforeSleepMin * MIN;
+        long stop = onDate(w, s.waterStop, 0);
+        return Math.min(w.end, stop <= w.start ? onDate(w, s.waterStop, 1) : stop);
+    }
+
+    /** The first moment water reminders may fire when a start time is chosen; never before wake. */
+    private static long waterStart(Settings s, Window w) {
+        return Math.max(w.start, onDate(w, s.waterStart, 0));
+    }
+
+    /** When the window's first water reminder falls: the chosen start time, or 10 min after wake. */
+    static long waterStartAt(Settings s, Window w) {
+        return s.waterCustom ? waterStart(s, w) : w.start + FIRST_WATER_MS;
+    }
+
+    private static long onDate(Window w, String hhmm, int plusDays) {
+        return w.date.plusDays(plusDays).atTime(LocalTime.parse(hhmm)).atZone(w.zone).toInstant().toEpochMilli();
     }
 
     private static void finish(Settings s, DayState d, long now, ZoneId z) {
         d.nextDayStartAt = nextWake(s, now, z);
     }
 
+    /** One day's hours, or null when reminders are off that day. */
     private static Window window(Settings s, LocalDate date, ZoneId z) {
-        boolean weekend = false;
-        for (int d : s.weekendDays) weekend |= d == date.getDayOfWeek().getValue();
-        LocalTime wake = LocalTime.parse(weekend ? s.weekendWake : s.weekdayWake);
-        LocalTime sleep = LocalTime.parse(weekend ? s.weekendSleep : s.weekdaySleep);
+        int i = date.getDayOfWeek().getValue() - 1; // Monday first
+        if (s.dayOn[i] == 0) return null;
+        LocalTime wake = LocalTime.ofSecondOfDay(s.dayWake[i] * 60L);
+        LocalTime sleep = LocalTime.ofSecondOfDay(s.daySleep[i] * 60L);
         ZonedDateTime start = date.atTime(wake).atZone(z);
         ZonedDateTime end = (sleep.isAfter(wake) ? date : date.plusDays(1)).atTime(sleep).atZone(z);
-        return new Window(date, start.toInstant().toEpochMilli(), end.toInstant().toEpochMilli());
+        return new Window(date, start.toInstant().toEpochMilli(), end.toInstant().toEpochMilli(), z);
     }
 }

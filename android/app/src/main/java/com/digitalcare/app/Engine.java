@@ -18,6 +18,9 @@ import org.json.JSONObject;
  * Every entry point is synchronized: the plugin thread and the receiver's main thread both call in.
  */
 final class Engine {
+    /** Set when the phone-use service is found down; cleared once it runs again. */
+    private static volatile boolean screenStopped;
+
     private Engine() {}
 
     /** Recomputes when nothing is armed (first launch) or an alarm was lost, and always re-arms. */
@@ -36,12 +39,24 @@ final class Engine {
         DayState d = day(c);
         Scheduler.recompute(s, d, System.currentTimeMillis(), ZoneId.systemDefault());
         commit(c, s, d);
+        Notifier.ensureChannels(c, s); // a changed sound or pop-up choice is a new channel
+    }
+
+    /** Makes each alert's channel match its current choice and removes the ones nothing uses. */
+    static synchronized void ensureChannels(Context c) { Notifier.ensureChannels(c, settings(c)); }
+
+    /** A sample of an alert delivered the way the Settings screen currently shows it, saved or not. */
+    static synchronized void testAlert(Context c, String alert, int sound, boolean popup) {
+        Alert a = Alert.of(alert);
+        if (a != null) Notifier.postTest(c, a, new AlertStyle(sound, popup));
     }
 
     static synchronized void logGlass(Context c) {
         run(c, Scheduler::logGlass);
         Notifier.cancel(c, Notifier.ID_WATER);
     }
+
+    static synchronized void removeGlass(Context c) { run(c, Scheduler::removeGlass); }
 
     static synchronized void pause(Context c, Integer minutes) {
         run(c, (s, d, now, z) -> Scheduler.pause(s, d, now, z, minutes));
@@ -64,17 +79,17 @@ final class Engine {
         }
         switch (k) {
             case BREAK:
-                if (Scheduler.onBreak(s, d, now, z)) Notifier.postBreak(c, d.breakLong, d.breakEndAt, s.wakeScreen);
+                if (Scheduler.onBreak(s, d, now, z)) Notifier.postBreak(c, s, d.breakLong, d.breakEndAt, s.wakeScreen);
                 break;
             case BREAK_END:
                 Scheduler.onBreakEnd(s, d, now, z);
                 Notifier.cancel(c, Notifier.ID_BREAK);
-                Notifier.postBreakOver(c);
+                Notifier.postBreakOver(c, s);
                 break;
             case WATER:
                 boolean first = d.waterFirst;
                 if (Scheduler.onWater(s, d, now, z)) {
-                    Notifier.postWater(c, first, d.glasses, Scheduler.goal(s, now, z), Scheduler.season(now, z).tip, s.wakeScreen);
+                    Notifier.postWater(c, s, first, d.glasses, Scheduler.goal(s, now, z), Scheduler.season(now, z).tip, s.wakeScreen);
                 }
                 break;
             case DAY_START:
@@ -92,6 +107,8 @@ final class Engine {
         DayState d = day(c);
         long now = System.currentTimeMillis();
         ZoneId z = ZoneId.systemDefault();
+        if (ScreenService.running) screenStopped = false;
+        Scheduler.Window w = Scheduler.windowAt(s, now, z);
         Season season = Scheduler.season(now, z);
         NotificationManager nm = c.getSystemService(NotificationManager.class);
         try {
@@ -107,15 +124,38 @@ final class Engine {
                     .put("nextBreakType", d.nextBreakAt == 0 ? JSONObject.NULL : Scheduler.nextBreakLong(s, d) ? "long" : "short")
                     .put("breakEndAt", time(d.breakEndAt))
                     .put("nextWaterAt", time(d.nextWaterAt))
+                    .put("waterCutoffAt", time(w == null ? 0 : Scheduler.cutoff(s, w)))
+                    .put("waterStartAt", time(w == null ? 0 : Scheduler.waterStartAt(s, w)))
+                    .put("dayStartAt", time(w == null ? 0 : w.start))
+                    .put("dayEndAt", time(w == null ? 0 : w.end))
                     .put("pausedUntil", d.pausedUntil > now ? d.pausedUntil : JSONObject.NULL)
+                    .put("phoneRunning", ScreenService.running)
+                    .put("phoneInUseSince", time(ScreenService.running ? ScreenService.use.inUseSince() : 0))
+                    .put("phoneRemindedAt", time(prefs(c).getLong("phoneRemindedAt", 0)))
                     .put("setup", new JSONObject()
                             .put("notifications", nm.areNotificationsEnabled())
                             .put("battery", c.getSystemService(PowerManager.class).isIgnoringBatteryOptimizations(c.getPackageName()))
-                            .put("fullScreen", Build.VERSION.SDK_INT < 34 || nm.canUseFullScreenIntent()))
+                            .put("fullScreen", Build.VERSION.SDK_INT < 34 || nm.canUseFullScreenIntent())
+                            .put("phoneUse", !screenStopped))
                     .put("manufacturer", Build.MANUFACTURER.toLowerCase(Locale.ROOT));
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /** Remembers that the phone-use service has run, so finding it down later counts as a stop. */
+    static synchronized void screenServiceStarted(Context c) {
+        prefs(c).edit().putBoolean("screenEverRunning", true).apply();
+    }
+
+    static synchronized int screenLimitMin(Context c) { return settings(c).screenLimitMin; }
+
+    /** The phone-use reminder, when it is allowed now: inside wake hours, not paused, switched on. */
+    static synchronized void remindScreen(Context c, long now) {
+        Settings s = settings(c);
+        if (!Scheduler.screenReminderAllowed(s, day(c), now, ZoneId.systemDefault())) return;
+        Notifier.postScreenBreak(c, s, Math.max(s.screenLimitMin, ScreenService.use.minutes(now))); // the repeat at 30 min says 30
+        prefs(c).edit().putLong("phoneRemindedAt", now).apply(); // Home shows when the last one went out
     }
 
     private interface Step { void apply(Settings s, DayState d, long now, ZoneId z); }
@@ -135,7 +175,10 @@ final class Engine {
 
     private static Settings settings(Context c) {
         try {
-            return Json.read(new JSONObject(prefs(c).getString("settings", "{}")), new Settings());
+            JSONObject saved = new JSONObject(prefs(c).getString("settings", "{}"));
+            Settings s = Json.read(saved, new Settings());
+            Settings.migrate(saved, s); // settings saved before each day had its own hours
+            return s;
         } catch (JSONException e) {
             throw new IllegalStateException(e);
         }
@@ -169,5 +212,7 @@ final class Engine {
             if (t > 0) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, t, pi);
             else am.cancel(pi);
         }
+        if (Scheduler.screenStopped(s, prefs(c).getBoolean("screenEverRunning", false), ScreenService.running)) screenStopped = true;
+        ScreenService.sync(c, s.screenOn);
     }
 }

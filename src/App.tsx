@@ -23,13 +23,14 @@ export function App() {
   useEffect(() => {
     const refresh = () => act(DigitalCare.getState())
     refresh()
+    const warm = setTimeout(refresh, 1500) // the phone-use service starts just after the first state; read it once more
     DigitalCare.getLaunchScreen().then(r => setView(r.screen), () => {})
     const handles = [
       DigitalCare.addListener('launchScreen', e => { setView(e.screen); refresh() }),
       // Native resume, not visibilitychange: it also fires after the permission and battery dialogs.
       DigitalCare.addListener('appResume', refresh),
     ]
-    return () => { handles.forEach(h => h.then(x => x.remove())) }
+    return () => { clearTimeout(warm); handles.forEach(h => h.then(x => x.remove())) }
   }, [act])
 
   // Alarms change state in the background; refresh once the next event time passes so an open screen stays true.
