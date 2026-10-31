@@ -2,7 +2,7 @@
 
 An Android app that reminds you to rest your eyes and drink water through the day. It follows the 20-20-20 rule: every 20 minutes, look at something 20 feet (about 6 m) away for 20 seconds.
 
-It is made to be sideloaded, for a Vivo phone. Everything stays on the phone: no account, no ads, no analytics, and the app's own code makes no network requests.
+It is made to be sideloaded, for an android phone. Everything stays on the phone: no account, no ads, no analytics, and the app's own code makes no network requests.
 
 ## What it does
 
