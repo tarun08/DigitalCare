@@ -109,7 +109,7 @@ build-apk.ps1           test, build and copy the APK
 
 ## Good to know
 
-- Android 8.0 (API 26) or newer. Made for a Vivo phone; other brands should work, but their battery-saver steps differ.
+- Android 8.0 (API 26) or newer. Made for an android phone; other android devices should work, but their battery-saver steps differ.
 - Reminders only fire inside your wake hours, and not while paused.
 - The phone-use counter needs its service to stay alive. If the phone kills it, Home says "Phone-use counter is not running" and the Setup card offers the fix.
 - Debug-signed and for sideloading only. Publishing to Google Play would need a policy review for exact alarms (`USE_EXACT_ALARM`) and a foreground-service declaration; the manifest has comments marking both.
