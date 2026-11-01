@@ -47,6 +47,19 @@ public class AlertTest {
     }
 
     @Test
+    public void fullScreenIsAnOptionForFourAlertsAndStillPostsTheBanner() {        // Break over has no screen to open
+        Settings s = new Settings();
+        for (Alert a : Alert.values()) assertFalse(a.id, a.full(s));                // off by default: today's behaviour
+        s.shortFull = true; s.longFull = true; s.waterFull = true; s.phoneFull = true;
+        s.shortPopup = false; s.phonePopup = false;                                 // full screen wins over a stale quiet flag
+        assertTrue(Alert.SHORT.full(s)); assertTrue(Alert.LONG.full(s));
+        assertTrue(Alert.WATER.full(s)); assertTrue(Alert.PHONE.full(s));
+        assertFalse(Alert.OVER.full(s));
+        assertEquals("short_0p", Alert.SHORT.channelId(Alert.SHORT.style(s)));     // the banner channel, so the fallback pops up
+        assertEquals("phone_0p", Alert.PHONE.channelId(Alert.PHONE.style(s)));
+    }
+
+    @Test
     public void aChangedChoiceMakesTheOldChannelObsolete() {
         Settings s = new Settings();
         s.waterSound = 3; s.waterPopup = false;                                    // water is now quiet and silent

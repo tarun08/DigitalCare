@@ -72,6 +72,14 @@ public class DigitalCarePlugin extends Plugin {
         notifyListeners("appResume", new JSObject());
     }
 
+    /** Done on a reminder screen: if the reminder opened DigitalCare over another app, go back to that app. */
+    @PluginMethod
+    public void leave(PluginCall call) {
+        MainActivity activity = (MainActivity) getActivity();
+        if (activity.takeOpenedByReminder()) activity.runOnUiThread(() -> activity.moveTaskToBack(true));
+        call.resolve();
+    }
+
     @PluginMethod
     public void openSystemSettings(PluginCall call) {
         String page = call.getString("page", "");
@@ -95,6 +103,9 @@ public class DigitalCarePlugin extends Plugin {
                 intent = Build.VERSION.SDK_INT >= 34
                         ? new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, pkgUri)
                         : appNotifications;
+                break;
+            case "overlay":
+                intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, pkgUri);
                 break;
             case "nightLight":
                 intent = new Intent("android.settings.NIGHT_DISPLAY_SETTINGS");

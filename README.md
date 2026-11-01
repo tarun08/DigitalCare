@@ -7,7 +7,7 @@ It is made to be sideloaded, for an android phone. Everything stays on the phone
 ## What it does
 
 **Eye breaks**
-- A short break every 20 minutes (1 to 60) lasting 20 seconds (10 to 60). Every 3rd break is a long one (set any whole number from 2 to 99) lasting 5 minutes (1 to 15), to stand, walk and stretch.
+- A short break every 20 minutes (1 to 60) lasting 20 seconds (10 to 60). A long break lasting 5 minutes (1 to 15) comes every 60 minutes, to stand, walk and stretch. Set that to any number of minutes, from twice the short interval up to 1440: the long break comes exactly that long after the last one ended.
 - The notification counts down and has **Skip** and **Snooze 5 min** buttons. A short "Break over" signal ends the break. Tapping a notification opens a break screen with an animation and a countdown.
 
 **Water**
@@ -17,6 +17,7 @@ It is made to be sideloaded, for an android phone. Everything stays on the phone
 
 **Phone-use reminder**
 - After 15 minutes of using the phone in a row (set 1 to 60) it asks you to look away, and asks again every 15 minutes while you carry on. A screen-off of one minute or more starts a new count.
+- Tapping the reminder opens a "Look away" screen with a 20-second countdown, like the 20-minute break.
 - Home shows how long you have been on the phone, in seconds for the first minute, and when the last reminder went out.
 - The counter runs as an Android foreground service, so a small permanent notification is shown while it is on.
 
@@ -25,8 +26,12 @@ It is made to be sideloaded, for an android phone. Everything stays on the phone
 - **Pause** reminders for 30 minutes, 1 hour or until tomorrow.
 
 **Alerts**
-- For each of the five alerts (short break, long break, break over, water, phone use): sound and vibration, sound only, vibration only or silent, and a pop-up banner or quiet. **Send a test alert** tries a choice before you save it.
-- Optional: show break and water reminders full screen over the lock screen.
+- For each of the five alerts (short break, long break, break over, water, phone use): sound and vibration, sound only, vibration only or silent, and how it appears: **full screen**, a pop-up banner or quiet. **Send a test alert** tries the sound and banner before you save.
+- **Full screen** opens the reminder's own screen by itself, over whatever you are doing, even while you use the phone. It needs "Display over other apps" for DigitalCare; Home shows a Fix button until it is on, and without it you get the pop-up banner. It is on offer for every alert except break over.
+- Optional **Wake screen**: show break and water reminders over the lock screen when the phone is locked.
+
+**Language**
+- The whole app, notifications included, can be in English or Hindi (हिन्दी). Choose it in Settings; the page changes at once. The phone's own menu names in the Vivo steps stay in English, as the phone shows them.
 
 **Screen comfort**
 - Shortcuts to the phone's Night light (some phones call it "Eye protection") and Extra dim settings.
@@ -67,7 +72,7 @@ cd android && ./gradlew assembleDebug    # android/app/build/outputs/apk/debug/a
 
 ## Develop
 
-`npm run dev` serves the screens in a browser at the address Vite prints, with a fake Android plugin and made-up data, so you can work on the UI without a phone. The fake plugin is left out of production builds. Preview the other screens with `?screen=short`, `?screen=long` or `?screen=water`. Alarms and notifications only work on a phone.
+`npm run dev` serves the screens in a browser at the address Vite prints, with a fake Android plugin and made-up data, so you can work on the UI without a phone. The fake plugin is left out of production builds. Preview the other screens with `?screen=short`, `?screen=long`, `?screen=water` or `?screen=phone`, and Hindi with `?lang=hi` (also `?overlay=on`, `?phone=off|stopped|reminded|fresh`, `?water=none|late`). Alarms and notifications only work on a phone.
 
 The scheduling rules are plain Java with JUnit tests (`cd android && ./gradlew test`), so they run on a computer too.
 
@@ -86,8 +91,10 @@ The screens are React and TypeScript running in a Capacitor WebView. All timing 
 
 ```
 src/                    the screens: Home, Settings, break and water screens
+src/text.ts             all the app's text in English and Hindi (the build fails if a Hindi string is missing)
 src/mock.ts             the fake plugin for the browser preview (dev only)
 android/app/src/main/   the native engine (java/com/digitalcare/app) and the manifest
+  res/values*/strings.xml   the notification texts: English, and Hindi in values-hi (a test keeps them in step)
 android/app/src/test/   JUnit tests for the scheduler and settings
 public/anim/            break and water animations, drawn by tools/make_animations.py
 docs/superpowers/       the v1 design spec and implementation plan (written for v1, the app has grown since)
@@ -101,7 +108,8 @@ build-apk.ps1           test, build and copy the APK
 | Notifications | Show the reminders. |
 | Exact alarms | Fire on time, even when the phone is idle. |
 | Start at boot | Set the alarms again after a restart. |
-| Full-screen notifications | The optional full-screen reminder over the lock screen. |
+| Full-screen notifications | The optional reminder screen over the lock screen. |
+| Display over other apps | Only for the Full screen choice: lets a reminder open its screen by itself while you use the phone. |
 | Vibrate | Vibrate for alerts. |
 | Ignore battery optimization | So you can switch battery optimization off for the app. |
 | Foreground service | The phone-use counter. |

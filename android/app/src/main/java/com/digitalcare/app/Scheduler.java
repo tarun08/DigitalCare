@@ -58,18 +58,34 @@ final class Scheduler {
         return s.smartWater ? season(now, z).goal : s.customGoal;
     }
 
+    /** Whether the next break is the long one: it falls at or after the minute the long break comes due. */
     static boolean nextBreakLong(Settings s, DayState d) {
-        return d.snoozed ? d.breakLong : (d.breakCount + 1) % s.longEveryN == 0;
+        return d.snoozed ? d.breakLong : d.nextBreakAt != 0 && d.nextBreakAt >= longDueAt(s, d);
+    }
+
+    private static long longDueAt(Settings s, DayState d) { return d.lastLongAt + s.longEveryMin * MIN; }
+
+    /**
+     * When the next break falls after `from`: a regular one a short interval on, or the long break at the minute it
+     * comes due when that is within the next interval and a half. Never closer than half an interval to the last break.
+     * A long break already overdue (a pause, the phone off) is simply the next regular break.
+     */
+    private static long nextBreakAfter(Settings s, DayState d, long from) {
+        long gap = s.shortEveryMin * MIN;
+        long due = longDueAt(s, d);
+        if (due <= from || due > from + gap + gap / 2) return from + gap;
+        return Math.max(due, from + gap / 2);
     }
 
     static void recompute(Settings s, DayState d, long now, ZoneId z) {
         Window w = windowAt(s, now, z);
         if (w != null && w.date.toEpochDay() != d.dayDate) { // matched by date so a wake-time change keeps today
             d.glasses = 0;
-            d.breakCount = 0;
+            d.lastLongAt = now;
             d.dayDate = w.date.toEpochDay();
             d.waterFirst = false;
         }
+        if (d.lastLongAt == 0) d.lastLongAt = now; // saved before the long break timer existed
         d.breakEndAt = 0;
         d.snoozed = false;
         if (d.pausedUntil > now) {
@@ -77,7 +93,7 @@ final class Scheduler {
             d.nextWaterAt = 0;
         } else {
             d.pausedUntil = 0;
-            d.nextBreakAt = breakAt(s, w, now + s.shortEveryMin * MIN);
+            d.nextBreakAt = breakAt(s, w, nextBreakAfter(s, d, now));
             d.nextWaterAt = waterNext(s, d, now, z);
         }
         finish(s, d, now, z);
@@ -136,12 +152,12 @@ final class Scheduler {
             return;
         }
         d.glasses = 0;
-        d.breakCount = 0;
+        d.lastLongAt = now;
         d.dayDate = w.date.toEpochDay();
         d.pausedUntil = 0;
         d.breakEndAt = 0;
         d.snoozed = false;
-        d.nextBreakAt = breakAt(s, w, now + s.shortEveryMin * MIN);
+        d.nextBreakAt = breakAt(s, w, nextBreakAfter(s, d, now));
         d.waterFirst = true;
         long first = s.waterCustom ? Math.max(now, waterStart(s, w)) : now + FIRST_WATER_MS;
         d.nextWaterAt = s.waterOn && first <= cutoff(s, w) ? first : 0;
@@ -154,10 +170,8 @@ final class Scheduler {
         if (newDay(s, d, w, now, z)) return false;
         boolean show = w != null && s.breaksOn;
         if (show) {
-            if (!d.snoozed) {
-                d.breakCount++;
-                d.breakLong = d.breakCount % s.longEveryN == 0;
-            }
+            if (d.lastLongAt == 0) d.lastLongAt = now; // saved before the long break timer existed
+            if (!d.snoozed) d.breakLong = now >= longDueAt(s, d);
             d.breakEndAt = now + (d.breakLong ? s.longMin * MIN : s.shortSec * 1000L);
         }
         d.snoozed = false;
@@ -169,8 +183,9 @@ final class Scheduler {
     static void onBreakEnd(Settings s, DayState d, long now, ZoneId z) {
         Window w = windowAt(s, now, z);
         if (newDay(s, d, w, now, z)) return;
+        if (d.breakEndAt != 0 && d.breakLong) d.lastLongAt = now; // a long break was running, finished or skipped: time the next from here
         d.breakEndAt = 0;
-        d.nextBreakAt = breakAt(s, w, now + s.shortEveryMin * MIN);
+        d.nextBreakAt = breakAt(s, w, nextBreakAfter(s, d, now));
         finish(s, d, now, z);
     }
 

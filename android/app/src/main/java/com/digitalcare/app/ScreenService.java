@@ -2,6 +2,7 @@ package com.digitalcare.app;
 
 import android.app.KeyguardManager;
 import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -22,6 +23,7 @@ import androidx.core.content.ContextCompat;
 public class ScreenService extends Service {
     static volatile boolean running;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private String noticeLanguage; // the language the permanent notice is showing in
     static volatile ScreenUse use = new ScreenUse(); // shared so Home can show the count; a new one per service start
     static volatile ScreenService instance;           // the running service, so a changed limit can reach it
 
@@ -41,12 +43,12 @@ public class ScreenService extends Service {
 
     /**
      * Starts or stops the service to match the setting. Android 12+ can refuse a background start; the next app open retries.
-     * A service already running re-times its pending reminder: the limit may have just changed.
+     * A service already running takes up what may have just changed: the limit and the language.
      */
     static void sync(Context c, boolean on) {
         if (on == running) {
             ScreenService s = instance;
-            if (on && s != null) s.handler.post(s::schedule);
+            if (on && s != null) s.handler.post(s::refresh);
             return;
         }
         Intent i = new Intent(c, ScreenService.class);
@@ -62,7 +64,8 @@ public class ScreenService extends Service {
         super.onCreate();
         use = new ScreenUse();
         Notifier.ensureServiceChannel(this);
-        Notification notice = Notifier.screenServiceNotice(this);
+        noticeLanguage = Engine.language(this);
+        Notification notice = Notifier.screenServiceNotice(this, noticeLanguage);
         if (Build.VERSION.SDK_INT >= 34) {
             startForeground(Notifier.ID_SCREEN_SERVICE, notice, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         } else {
@@ -95,6 +98,15 @@ public class ScreenService extends Service {
         instance = null;
         running = false;
         super.onDestroy();
+    }
+
+    /** The reminder was timed with the old limit, and the permanent notice may be in the old language: redo both. */
+    private void refresh() {
+        schedule();
+        String language = Engine.language(this);
+        if (language.equals(noticeLanguage)) return; // posting it again would bring back a notice the user swiped away
+        noticeLanguage = language;
+        getSystemService(NotificationManager.class).notify(Notifier.ID_SCREEN_SERVICE, Notifier.screenServiceNotice(this, language));
     }
 
     private void schedule() {

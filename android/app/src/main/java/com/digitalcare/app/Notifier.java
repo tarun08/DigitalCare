@@ -6,8 +6,11 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
+import android.media.AudioManager;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Notification channels and the notifications. Android never lets an app edit a channel, so each sound and
@@ -35,36 +38,60 @@ final class Notifier {
     }
 
     static void postBreak(Context c, Settings s, boolean isLong, long endAt, boolean wakeScreen) {
+        Context t = in(c, s.language);
         Alert a = isLong ? Alert.LONG : Alert.SHORT;
-        Notification.Builder b = builder(c, channel(c, a, a.style(s)), ID_BREAK, isLong ? "long" : "short", wakeScreen)
-                .setContentTitle(isLong ? "Long break · stand, walk, stretch" : "Eye break · look 6 m away")
+        Notification.Builder b = builder(c, channel(c, a, a.style(s)), ID_BREAK, isLong ? "long" : "short", wakeScreen || a.full(s))
+                .setContentTitle(t.getString(isLong ? R.string.n_long_break : R.string.n_eye_break))
                 .setWhen(endAt)
                 .setShowWhen(true)
                 .setUsesChronometer(true)
                 .setChronometerCountDown(true)
-                .addAction(action(c, EventReceiver.SKIP, 30, "Skip"))
-                .addAction(action(c, EventReceiver.SNOOZE, 31, "Snooze 5 min"));
+                .addAction(action(c, EventReceiver.SKIP, 30, t.getString(R.string.n_skip)))
+                .addAction(action(c, EventReceiver.SNOOZE, 31, t.getString(R.string.n_snooze)));
         post(c, ID_BREAK, b);
+        if (a.full(s)) launch(c, isLong ? "long" : "short");
     }
 
     static void postBreakOver(Context c, Settings s) {
         post(c, ID_BREAK_OVER, builder(c, channel(c, Alert.OVER, Alert.OVER.style(s)), ID_BREAK_OVER, null, false)
-                .setContentTitle("Break over")
+                .setContentTitle(in(c, s.language).getString(R.string.n_break_over))
                 .setTimeoutAfter(10_000));
     }
 
-    static void postWater(Context c, Settings s, boolean first, int glasses, int goal, String tip, boolean wakeScreen) {
-        post(c, ID_WATER, builder(c, channel(c, Alert.WATER, Alert.WATER.style(s)), ID_WATER, "water", wakeScreen)
-                .setContentTitle("Drink water · " + glasses + "/" + goal + " glasses")
-                .setContentText(first ? "Start your day with 1–2 glasses" : tip)
-                .setStyle(new Notification.BigTextStyle().bigText(first ? "Start your day with 1–2 glasses" : tip))
-                .addAction(action(c, EventReceiver.GLASS, 32, "Drank 1 glass")));
+    static void postWater(Context c, Settings s, boolean first, int glasses, int goal, Season season, boolean wakeScreen) {
+        Context t = in(c, s.language);
+        String text = first ? t.getString(R.string.n_water_first) : tip(c, s.language, season);
+        post(c, ID_WATER, builder(c, channel(c, Alert.WATER, Alert.WATER.style(s)), ID_WATER, "water", wakeScreen || Alert.WATER.full(s))
+                .setContentTitle(t.getString(R.string.n_water, glasses, goal))
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(text))
+                .addAction(action(c, EventReceiver.GLASS, 32, t.getString(R.string.n_glass))));
+        if (Alert.WATER.full(s)) launch(c, "water");
     }
 
     static void postScreenBreak(Context c, Settings s, int minutes) {
-        post(c, ID_SCREEN, builder(c, channel(c, Alert.PHONE, Alert.PHONE.style(s)), ID_SCREEN, null, false)
-                .setContentTitle("Time for a break")
-                .setContentText("You've been using your phone for " + minutes + " minutes in a row. Look at something 6 m away."));
+        Context t = in(c, s.language);
+        post(c, ID_SCREEN, builder(c, channel(c, Alert.PHONE, Alert.PHONE.style(s)), ID_SCREEN, "phone", Alert.PHONE.full(s))
+                .setContentTitle(t.getString(R.string.n_phone_title))
+                .setContentText(t.getResources().getQuantityString(R.plurals.n_phone_text, minutes, minutes)));
+        if (Alert.PHONE.full(s)) launch(c, "phone");
+    }
+
+    /** The season's water tip in the reminder language. */
+    static String tip(Context c, String language, Season season) {
+        switch (season) {
+            case SUMMER: return in(c, language).getString(R.string.tip_summer);
+            case MONSOON: return in(c, language).getString(R.string.tip_monsoon);
+            case TRANSITION: return in(c, language).getString(R.string.tip_transition);
+            default: return in(c, language).getString(R.string.tip_winter);
+        }
+    }
+
+    /** Reminder texts come from this context: the chosen language, whatever language the phone itself is set to. */
+    private static Context in(Context c, String language) {
+        Configuration config = new Configuration(c.getResources().getConfiguration());
+        config.setLocale(Locale.forLanguageTag(language));
+        return c.createConfigurationContext(config);
     }
 
     /** A sample of an alert delivered this way, for the Settings screen's "Send a test alert". */
@@ -74,10 +101,11 @@ final class Notifier {
                 .setContentText("This is how it looks and sounds (" + style.describe() + ")."));
     }
 
-    static Notification screenServiceNotice(Context c) {
+    static Notification screenServiceNotice(Context c, String language) {
+        Context t = in(c, language);
         return builder(c, "screen_service", ID_SCREEN_SERVICE, null, false)
-                .setContentTitle("Phone-use reminder is on")
-                .setContentText("Change it in DigitalCare Settings.")
+                .setContentTitle(t.getString(R.string.n_service_title))
+                .setContentText(t.getString(R.string.n_service_text))
                 .build();
     }
 
@@ -125,6 +153,23 @@ final class Notifier {
         Intent i = new Intent(c, EventReceiver.class).setAction(act);
         PendingIntent pi = PendingIntent.getBroadcast(c, requestCode, i, FLAGS);
         return new Notification.Action.Builder(null, title, pi).build();
+    }
+
+    /**
+     * Opens a reminder's screen by itself, over whatever is on screen. Android allows that from the background only
+     * with "Display over other apps"; without it the banner already posted is all there is. Not during a call: the
+     * screen would cover its buttons.
+     */
+    private static void launch(Context c, String screen) {
+        if (!android.provider.Settings.canDrawOverlays(c)) return;
+        int mode = c.getSystemService(AudioManager.class).getMode();
+        if (mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION) return;
+        try {
+            c.startActivity(new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .putExtra("screen", screen).putExtra("wake", true));
+        } catch (RuntimeException refused) {
+            // The phone said no: the banner is still there.
+        }
     }
 
     private static void post(Context c, int id, Notification.Builder b) {

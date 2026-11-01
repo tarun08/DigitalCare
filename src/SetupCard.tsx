@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DigitalCare, type State, type SystemPage } from './plugin'
+import { text } from './text'
 
 const DISMISSED = 'digitalcare.vivoStepsDismissed'
 
@@ -9,13 +10,17 @@ function readDismissed(): boolean {
 
 export function SetupCard({ state }: { state: State }) {
   const [dismissed, setDismissed] = useState(readDismissed)
+  const s = state.settings
+  const t = text(s.language).setup
   const open = (page: SystemPage) => { DigitalCare.openSystemSettings({ page }).catch(() => {}) }
   const rows: [string, boolean, SystemPage][] = [
-    ['Notifications', state.setup.notifications, 'channel'],
-    ['Battery optimization off', state.setup.battery, 'battery'],
+    [t.notifications, state.setup.notifications, 'channel'],
+    [t.battery, state.setup.battery, 'battery'],
   ]
-  if (state.settings.screenOn) rows.push([state.setup.phoneUse ? 'Phone-use reminder running' : 'Phone-use reminder was stopped', state.setup.phoneUse, 'battery'])
-  if (state.settings.wakeScreen) rows.push(['Full-screen alerts', state.setup.fullScreen, 'fullScreen'])
+  if (s.screenOn) rows.push([state.setup.phoneUse ? t.phoneRunning : t.phoneStopped, state.setup.phoneUse, 'battery'])
+  const anyFull = s.shortFull || s.longFull || s.waterFull || s.phoneFull
+  if (s.wakeScreen || anyFull) rows.push([t.fullScreen, state.setup.fullScreen, 'fullScreen'])
+  if (anyFull) rows.push([t.overlay, state.setup.overlay, 'overlay'])
   const vivo = state.manufacturer === 'vivo'
   if (rows.every(([, ok]) => ok) && (!vivo || dismissed)) return null
 
@@ -26,32 +31,32 @@ export function SetupCard({ state }: { state: State }) {
 
   return (
     <section className="card setup">
-      <h2>Setup</h2>
+      <h2>{t.title}</h2>
       <ul className="checks">
         {rows.map(([label, ok, page]) => (
           <li key={label}>
             <span>{label}</span>
-            {ok ? <span className="ok" aria-label="done">✓</span> : <button onClick={() => open(page)}>Fix</button>}
+            {ok ? <span className="ok" aria-label={t.done}>✓</span> : <button onClick={() => open(page)}>{t.fix}</button>}
           </li>
         ))}
       </ul>
       {vivo ? !dismissed && (
         <>
-          <h3>Vivo phones also need</h3>
+          <h3>{t.vivoTitle}</h3>
           <ol>
-            <li>Settings → Battery → Background power consumption management → DigitalCare → allow high background usage / don't restrict.</li>
-            <li>Settings → Apps → Autostart (on some versions: i Manager → App manager → Autostart) → DigitalCare on.</li>
-            <li>App info → Permissions → "Display on lock screen" and "Display pop-up windows while running in background" on (needed for Wake screen).</li>
-            <li>Recent apps → lock the DigitalCare card.</li>
+            <li>{t.vivo1}</li>
+            <li>{t.vivo2}</li>
+            <li>{t.vivo3}</li>
+            <li>{t.vivo4}</li>
           </ol>
-          <p className="muted">Names vary by phone version.</p>
+          <p className="muted">{t.namesVary}</p>
           <div className="row">
-            <button onClick={() => open('appDetails')}>Open app info</button>
-            <button onClick={dismiss}>Done, hide these</button>
+            <button onClick={() => open('appDetails')}>{t.appInfo}</button>
+            <button onClick={dismiss}>{t.hide}</button>
           </div>
         </>
       ) : (
-        <p><a href="https://dontkillmyapp.com/">Keep reminders alive: dontkillmyapp.com</a></p>
+        <p><a href="https://dontkillmyapp.com/">{t.keepAlive}</a></p>
       )}
     </section>
   )

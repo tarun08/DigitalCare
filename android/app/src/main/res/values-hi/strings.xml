@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="n_eye_break">आँखों का ब्रेक · 6 मीटर दूर देखें</string>
+    <string name="n_long_break">लंबा ब्रेक · खड़े हों, टहलें, स्ट्रेच करें</string>
+    <string name="n_skip">छोड़ें</string>
+    <string name="n_snooze">5 मिनट टालें</string>
+    <string name="n_break_over">ब्रेक पूरा हुआ</string>
+    <string name="n_water">पानी पिएँ · %1$d/%2$d गिलास</string>
+    <string name="n_water_first">दिन की शुरुआत 1–2 गिलास पानी से करें</string>
+    <string name="n_glass">1 गिलास पिया</string>
+    <string name="n_phone_title">ब्रेक का समय</string>
+    <plurals name="n_phone_text">
+        <item quantity="one">आप लगातार %1$d मिनट से फ़ोन इस्तेमाल कर रहे हैं। 6 मीटर दूर किसी चीज़ को देखें।</item>
+        <item quantity="other">आप लगातार %1$d मिनट से फ़ोन इस्तेमाल कर रहे हैं। 6 मीटर दूर किसी चीज़ को देखें।</item>
+    </plurals>
+    <string name="n_service_title">फ़ोन-उपयोग रिमाइंडर चालू है</string>
+    <string name="n_service_text">इसे DigitalCare की सेटिंग्स में बदलें।</string>
+    <string name="tip_summer">पसीना आने के बाद नींबू पानी, छाछ या ORS लें। धूप से आते ही बहुत ठंडा पानी न पिएँ।</string>
+    <string name="tip_monsoon">उमस में पसीने से होने वाली कमी पता नहीं चलती। उबला या फ़िल्टर किया हुआ पानी पिएँ।</string>
+    <string name="tip_transition">प्यास न लगे तब भी थोड़ा-थोड़ा पानी पीते रहें।</string>
+    <string name="tip_winter">प्यास कम लगती है, पर पानी की ज़रूरत वही रहती है। गुनगुना पानी फ़ायदेमंद है।</string>
+</resources>

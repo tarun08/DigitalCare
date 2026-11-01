@@ -3,15 +3,17 @@ import { DigitalCare, type Screen, type State } from './plugin'
 import { BreakScreen } from './BreakScreen'
 import { Home } from './Home'
 import { SettingsScreen } from './SettingsScreen'
+import { usePageLanguage } from './text'
 import { WaterScreen } from './WaterScreen'
 
 export type View = Screen | 'settings'
-export interface ScreenProps { state: State; act: (p: Promise<State>) => void; go: (v: View) => void }
+export interface ScreenProps { state: State; act: (p: Promise<State>) => void; go: (v: View) => void; done: () => void }
 
 export function App() {
   const [state, setState] = useState<State | null>(null)
   const [view, setView] = useState<View>('home')
   const [error, setError] = useState<string | null>(null)
+  usePageLanguage(state?.settings.language ?? 'en')
 
   const act = useCallback((p: Promise<State>) => {
     p.then(
@@ -19,6 +21,9 @@ export function App() {
       (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
     )
   }, [])
+
+  // A reminder screen is finished: back to Home, and the phone returns to the app the reminder opened over (if it did).
+  const done = useCallback(() => { setView('home'); DigitalCare.leave().catch(() => {}) }, [])
 
   useEffect(() => {
     const refresh = () => act(DigitalCare.getState())
@@ -45,11 +50,11 @@ export function App() {
   }, [state, act])
 
   if (!state) return <main>{error ? <p className="error" role="alert">{error}</p> : <p>Loading…</p>}</main>
-  const props: ScreenProps = { state, act, go: setView }
+  const props: ScreenProps = { state, act, go: setView, done }
   return (
     <main>
       {error && <p className="error" role="alert">{error}</p>}
-      {view === 'short' || view === 'long' ? <BreakScreen {...props} type={view} />
+      {view === 'short' || view === 'long' || view === 'phone' ? <BreakScreen {...props} type={view} />
         : view === 'water' ? <WaterScreen {...props} />
         : view === 'settings' ? <SettingsScreen {...props} />
         : <Home {...props} />}

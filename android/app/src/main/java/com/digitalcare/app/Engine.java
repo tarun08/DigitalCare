@@ -89,7 +89,7 @@ final class Engine {
             case WATER:
                 boolean first = d.waterFirst;
                 if (Scheduler.onWater(s, d, now, z)) {
-                    Notifier.postWater(c, s, first, d.glasses, Scheduler.goal(s, now, z), Scheduler.season(now, z).tip, s.wakeScreen);
+                    Notifier.postWater(c, s, first, d.glasses, Scheduler.goal(s, now, z), Scheduler.season(now, z), s.wakeScreen);
                 }
                 break;
             case DAY_START:
@@ -117,7 +117,7 @@ final class Engine {
                     .put("glasses", d.glasses)
                     .put("goal", Scheduler.goal(s, now, z))
                     .put("season", season.id)
-                    .put("tip", season.tip)
+                    .put("tip", Notifier.tip(c, s.language, season))
                     .put("inDay", Scheduler.windowAt(s, now, z) != null)
                     .put("nextDayStartAt", time(d.nextDayStartAt))
                     .put("nextBreakAt", time(d.nextBreakAt))
@@ -136,6 +136,7 @@ final class Engine {
                             .put("notifications", nm.areNotificationsEnabled())
                             .put("battery", c.getSystemService(PowerManager.class).isIgnoringBatteryOptimizations(c.getPackageName()))
                             .put("fullScreen", Build.VERSION.SDK_INT < 34 || nm.canUseFullScreenIntent())
+                            .put("overlay", android.provider.Settings.canDrawOverlays(c))
                             .put("phoneUse", !screenStopped))
                     .put("manufacturer", Build.MANUFACTURER.toLowerCase(Locale.ROOT));
         } catch (JSONException e) {
@@ -149,6 +150,8 @@ final class Engine {
     }
 
     static synchronized int screenLimitMin(Context c) { return settings(c).screenLimitMin; }
+
+    static synchronized String language(Context c) { return settings(c).language; }
 
     /** The phone-use reminder, when it is allowed now: inside wake hours, not paused, switched on. */
     static synchronized void remindScreen(Context c, long now) {

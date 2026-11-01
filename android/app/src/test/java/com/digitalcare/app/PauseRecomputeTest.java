@@ -81,9 +81,9 @@ public class PauseRecomputeTest {
 
     @Test
     public void missedDayStartResetsOnRecompute() {            // Review Focus 3
-        d.glasses = 6; d.breakCount = 9;
+        d.glasses = 6; d.lastLongAt = mon("20:00");
         Scheduler.recompute(s, d, at("2026-11-03T09:00"), Z);         // phone was off at 07:00
-        assertEquals(0, d.glasses); assertEquals(0, d.breakCount);
+        assertEquals(0, d.glasses); assertEquals(at("2026-11-03T09:00"), d.lastLongAt);   // the long break timer starts with the day
     }
 
     @Test

@@ -24,13 +24,25 @@ enum Alert {
         this.label = label;
     }
 
+    /** A full screen alert still posts the banner (it is what shows when Android refuses to open the screen), so it pops up. */
     AlertStyle style(Settings s) {
         switch (this) {
-            case SHORT: return new AlertStyle(s.shortSound, s.shortPopup);
-            case LONG: return new AlertStyle(s.longSound, s.longPopup);
+            case SHORT: return new AlertStyle(s.shortSound, s.shortPopup || s.shortFull);
+            case LONG: return new AlertStyle(s.longSound, s.longPopup || s.longFull);
             case OVER: return new AlertStyle(s.overSound, s.overPopup);
-            case WATER: return new AlertStyle(s.waterSound, s.waterPopup);
-            default: return new AlertStyle(s.phoneSound, s.phonePopup);
+            case WATER: return new AlertStyle(s.waterSound, s.waterPopup || s.waterFull);
+            default: return new AlertStyle(s.phoneSound, s.phonePopup || s.phoneFull);
+        }
+    }
+
+    /** Whether the alert's screen opens by itself. Break over has no screen. */
+    boolean full(Settings s) {
+        switch (this) {
+            case SHORT: return s.shortFull;
+            case LONG: return s.longFull;
+            case WATER: return s.waterFull;
+            case PHONE: return s.phoneFull;
+            default: return false;
         }
     }
 

@@ -20,6 +20,11 @@ body {
   font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Devanagari letters stand taller than Latin ones at the same size: a Latin capital reaches 0.7 em above the line, Hindi
+   words with vowel marks about 1.0 em. Hindi text is set at 90% so a Hindi line and an English line look the same size. */
+:root:lang(hi) { font-size: 90%; }
+:root:not(:lang(hi)) .hi { font-size: 0.9em; } /* the Hindi half of a bilingual label on an English page */
+
 main {
   max-width: 32rem;
   margin: 0 auto;

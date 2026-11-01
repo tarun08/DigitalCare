@@ -5,9 +5,20 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import androidx.lifecycle.Lifecycle;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    /** A reminder opened this over another app, or over the lock screen: Done should hand the phone back. */
+    private volatile boolean openedByReminder;
+
+    /** True once per such launch, for the plugin's leave(). */
+    boolean takeOpenedByReminder() {
+        boolean was = openedByReminder;
+        openedByReminder = false;
+        return was;
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(DigitalCarePlugin.class);
@@ -28,6 +39,8 @@ public class MainActivity extends BridgeActivity {
         super.onNewIntent(intent);
         // Show over the lock screen only for full-screen reminder launches; normal launches clear it.
         boolean wake = intent.getBooleanExtra("wake", false);
+        // Only when the app was not already on screen: someone using DigitalCare itself should stay in it.
+        openedByReminder = wake && !getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.RESUMED);
         if (Build.VERSION.SDK_INT >= 27) {
             setShowWhenLocked(wake);
             setTurnScreenOn(wake);

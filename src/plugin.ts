@@ -1,20 +1,23 @@
 import { registerPlugin, type PluginListenerHandle } from '@capacitor/core'
 
-export type Screen = 'home' | 'short' | 'long' | 'water'
-export type SystemPage = 'channel' | 'battery' | 'fullScreen' | 'nightLight' | 'extraDim' | 'appDetails'
+export type Screen = 'home' | 'short' | 'long' | 'water' | 'phone'
+export type SystemPage = 'channel' | 'battery' | 'fullScreen' | 'overlay' | 'nightLight' | 'extraDim' | 'appDetails'
 export type AlertId = 'short' | 'long' | 'over' | 'water' | 'phone'
 
 export interface Settings {
   // Hours for each day, Monday first, as minutes after midnight. dayOn: 1 = reminders that day, 0 = none.
   dayWake: number[]; daySleep: number[]; dayOn: number[]
-  breaksOn: boolean; shortEveryMin: number; shortSec: number; longEveryN: number; longMin: number
+  breaksOn: boolean; shortEveryMin: number; shortSec: number; longEveryMin: number; longMin: number
   waterOn: boolean; smartWater: boolean; customGoal: number; customEveryMin: number; glassMl: number
   stopBeforeSleepMin: number; wakeScreen: boolean
+  language: 'en' | 'hi' // the language of the reminders: notifications and the reminder screens
   screenOn: boolean; screenLimitMin: number
   waterCustom: boolean; waterStart: string; waterStop: string
   // Sound: 0 sound + vibration, 1 sound only, 2 vibration only, 3 silent. Popup false = quiet.
   shortSound: number; longSound: number; overSound: number; waterSound: number; phoneSound: number
   shortPopup: boolean; longPopup: boolean; overPopup: boolean; waterPopup: boolean; phonePopup: boolean
+  // Full screen: the alert's screen opens by itself (needs "Display over other apps"). Break over has none.
+  shortFull: boolean; longFull: boolean; waterFull: boolean; phoneFull: boolean
 }
 
 export interface State {
@@ -25,7 +28,7 @@ export interface State {
   nextWaterAt: number | null; waterCutoffAt: number | null; pausedUntil: number | null
   phoneRunning: boolean; phoneInUseSince: number | null; phoneRemindedAt: number | null
   dayStartAt: number | null; dayEndAt: number | null; waterStartAt: number | null
-  setup: { notifications: boolean; battery: boolean; fullScreen: boolean; phoneUse: boolean }
+  setup: { notifications: boolean; battery: boolean; fullScreen: boolean; overlay: boolean; phoneUse: boolean }
   manufacturer: string
 }
 
@@ -40,6 +43,8 @@ export interface DigitalCarePlugin {
   snoozeBreak(): Promise<State>
   testAlert(opts: { alert: AlertId; sound: number; popup: boolean }): Promise<void>
   openSystemSettings(opts: { page: SystemPage; channel?: string }): Promise<void>
+  /** Sends DigitalCare to the back, if a reminder opened it over another app: you land where you were. */
+  leave(): Promise<void>
   getLaunchScreen(): Promise<{ screen: Screen }>
   addListener(event: 'launchScreen', cb: (e: { screen: Screen }) => void): Promise<PluginListenerHandle>
   addListener(event: 'appResume', cb: () => void): Promise<PluginListenerHandle>

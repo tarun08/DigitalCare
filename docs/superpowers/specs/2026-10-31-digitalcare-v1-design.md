@@ -65,13 +65,14 @@ Native engine (Java)
 - Settings saved by the first version (weekday and weekend times, selectable weekend days) are converted to the 7 days on first read.
 - A window that runs past midnight belongs to the day it started on. If it overlaps the next day's window, the next day's window wins from its wake time.
 - If sleep ≤ wake (for example sleep 00:30), the window ends on the next calendar day.
-- `DAY_START` fires at wake time. It resets glasses and the break counter, clears "pause until tomorrow", sets next break = wake + short interval, and sets next water = wake + 10 min.
+- `DAY_START` fires at wake time. It resets glasses and starts the long break timer, clears "pause until tomorrow", sets next break = wake + short interval, and sets next water = wake + 10 min.
 - Nothing fires after sleep time. The only alarm armed then is `DAY_START` for the next wake.
 
 ### 5.2 Eye breaks
 
-- Break counter `n` increments each time a break fires. A snoozed re-fire does not increment it.
-- The break is **long** when `n % N == 0`. N defaults to 3: with a 20-min short interval that's a long break every 60 min. N is typed as any whole number from 2 to 99 (a long break can only fall on a regular break slot, so it is always a whole number of short intervals); the screen shows the minutes it works out to (N × short interval).
+- The **long break timer** starts at wake and restarts each time a long break ends or is skipped. A long break is due `longEveryMin` minutes after that (default 60). A snoozed re-fire keeps its type and does not restart the timer.
+- **When the next break falls**, after a break ends at time `t` (and after Save, Resume and day start): normally `t` + the short interval. When the long break falls due within the next interval and a half, the next break is the long one, at the minute it is due, but never closer than half an interval to `t`. A long break that is already overdue (a pause, the phone off) is simply the next regular break. So long breaks come exactly `longEveryMin` minutes apart, and the short breaks fill the time between them.
+- A break is **long** when it fires at or after the due time. `longEveryMin` is any whole number of minutes from twice the short interval up to 1440, so a short break always falls between two long ones. Settings saved as "every Nth break" become N × the short interval.
 - When a break fires:
   - Post the break notification with a countdown (Android chronometer), **Skip** and **Snooze 5 min** buttons.
   - Set `BREAK_END` at now + duration (20 s short, 5 min long).
@@ -112,23 +113,28 @@ The general tip "A glass about 30 min before meals" is always shown. The app sho
 
 ### 5.5 Notifications
 
-Channels have fixed ids and are never recreated, so the user's choices in Android settings stick.
+Android never lets an app edit a notification channel, so each alert has one channel per choice (sound and vibration mode, and pop-up or quiet), with ids like `water_0p`. A channel is made when it is first used and removed when nothing uses it any more.
 
-| Channel id | Importance | Default sound / vibration | Content |
-|---|---|---|---|
-| `short_break` | HIGH | sound + vibration | "Eye break · look 6 m away" + countdown, Skip, Snooze 5 min |
-| `long_break` | HIGH | sound + vibration | "Long break · stand, walk, stretch" + countdown, Skip, Snooze 5 min |
-| `break_over` | DEFAULT | vibration only (no sound) | "Break over", auto-dismiss after 10 s |
-| `water` | HIGH | sound + vibration | "Drink water · 5/12 glasses" + season tip, Drank 1 glass |
+| Alert | Text | Buttons |
+|---|---|---|
+| Short break | "Eye break · look 6 m away" + countdown | Skip, Snooze 5 min |
+| Long break | "Long break · stand, walk, stretch" + countdown | Skip, Snooze 5 min |
+| Break over | "Break over", dismissed after 10 s | none |
+| Water | "Drink water · 5/12 glasses" + season tip | Drank 1 glass |
+| Phone use | "Time for a break · You've been using your phone for N minutes in a row. Look at something 6 m away." | none |
 
-- Tapping a notification opens the matching screen (`short`, `long` or `water`).
-- **Wake screen switch on:** break and water notifications add a full-screen intent to MainActivity. For these launches only, MainActivity calls `setShowWhenLocked(true)` and `setTurnScreenOn(true)`.
-- **Sound and vibration per type** are changed in Android's channel settings, opened from the app's Settings screen.
+By default every alert uses sound + vibration and a pop-up banner, except Break over (vibration only, quiet).
+
+- **Per alert:** sound and vibration is one of sound + vibration, sound only, vibration only, silent. It appears as full screen (not for Break over), a pop-up banner, or quiet.
+- Tapping a notification opens the matching screen (`short`, `long`, `water` or `phone`). The phone-use screen has no scheduled break behind it: it counts down the short-break length from when it opens.
+- **Wake screen switch on:** break and water notifications add a full-screen intent to MainActivity. For these launches only, MainActivity calls `setShowWhenLocked(true)` and `setTurnScreenOn(true)`. Android shows a full-screen intent as a pop-up banner while the phone is in use.
+- **Full screen** (short, long, water, phone): the banner is still posted, with the full-screen intent attached, and when the user has allowed "Display over other apps" (`SYSTEM_ALERT_WINDOW`) the app also starts MainActivity itself with the `screen` and `wake` extras, which Android allows from the background. Without that permission the banner is all there is, and the Setup card shows a Fix row.
+- **Language:** the whole app (every screen, and the notifications) follows the Language setting, English or Hindi; the Settings page changes the moment a language is picked. The notification texts are in `res/values/strings.xml` (English) and `res/values-hi/strings.xml` (Hindi) and are read with a context set to the chosen language, not the phone's. The screens' own text is in `src/text.ts`, typed so that the build fails if a Hindi string is missing. A unit test checks that every Hindi notification string exists and has the same placeholders. The phone's own menu names in the Vivo steps stay in English, as the phone shows them. Hindi text is set at 90% of the English size (`styles.css`), because Devanagari letters stand taller than Latin ones.
 
 ### 5.6 Alarms and permissions
 
 - Alarms use `setExactAndAllowWhileIdle(RTC_WAKEUP, …)`, with one PendingIntent per event kind (fixed request codes), so setting an alarm again replaces the old one.
-- Manifest permissions: `USE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED`, `POST_NOTIFICATIONS`, `USE_FULL_SCREEN_INTENT`, `VIBRATE`, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
+- Manifest permissions: `USE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED`, `POST_NOTIFICATIONS`, `USE_FULL_SCREEN_INTENT`, `VIBRATE`, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_SPECIAL_USE` (the phone-use counter), `SYSTEM_ALERT_WINDOW` (only for the Full screen choice) and `INTERNET` (from the Capacitor template, unused).
 - `USE_EXACT_ALARM` is granted at install for a sideloaded app. Code comment: `shortcut: USE_EXACT_ALARM is fine for sideload, Play Store publishing needs policy review`.
 
 ## 6. Settings and defaults
@@ -140,44 +146,73 @@ Channels have fixed ids and are never recreated, so the user's choices in Androi
 | Day on | all 7 days | any days, at least one |
 | Eye breaks on | on | on/off |
 | Short break every / length | 20 min / 20 s | 1–60 min / 10–60 s |
-| Long break every / length | 60 min (N = 3) / 5 min | N = 2–99 / 1–15 min |
+| Long break every / length | 60 min / 5 min | 2 × the short interval to 1440 min / 1–15 min |
 | Water on | on | on/off |
 | Smart water | on | on/off |
 | Custom goal / every | 8 glasses / 60 min | 1–20 / 1–180 min |
 | Glass size | 250 ml | 100–500 ml (display only) |
 | Stop before sleep | 90 min | 0–180 min |
 | Wake screen | off | on/off |
+| Alert shows as | pop-up banner (Break over: quiet) | full screen (not Break over), pop-up banner, quiet |
+| Language | English | English, Hindi |
 
 Snooze is fixed at 5 min. The 1-minute minimums exist so on-phone testing is quick.
 
 ## 7. Plugin API (TypeScript side)
 
 ```ts
-type Screen = 'home' | 'short' | 'long' | 'water';
-type SystemPage = 'channel' | 'battery' | 'fullScreen' | 'nightLight' | 'extraDim' | 'appDetails';
+export type Screen = 'home' | 'short' | 'long' | 'water' | 'phone'
+export type SystemPage = 'channel' | 'battery' | 'fullScreen' | 'overlay' | 'nightLight' | 'extraDim' | 'appDetails'
+export type AlertId = 'short' | 'long' | 'over' | 'water' | 'phone'
 
-getState(): Promise<State>
-saveSettings(settings: Settings): Promise<State>
-logGlass(): Promise<State>
-pause(opts: { minutes: number | null }): Promise<State>   // null = until tomorrow
-resume(): Promise<State>
-skipBreak(): Promise<State>
-snoozeBreak(): Promise<State>
-openSystemSettings(opts: { page: SystemPage; channel?: string }): Promise<void>
-getLaunchScreen(): Promise<{ screen: Screen }>             // plus 'launchScreen' event on new intents
+export interface Settings {
+  // Hours for each day, Monday first, as minutes after midnight. dayOn: 1 = reminders that day, 0 = none.
+  dayWake: number[]; daySleep: number[]; dayOn: number[]
+  breaksOn: boolean; shortEveryMin: number; shortSec: number; longEveryMin: number; longMin: number
+  waterOn: boolean; smartWater: boolean; customGoal: number; customEveryMin: number; glassMl: number
+  stopBeforeSleepMin: number; wakeScreen: boolean
+  language: 'en' | 'hi' // the language of the reminders: notifications and the reminder screens
+  screenOn: boolean; screenLimitMin: number
+  waterCustom: boolean; waterStart: string; waterStop: string
+  // Sound: 0 sound + vibration, 1 sound only, 2 vibration only, 3 silent. Popup false = quiet.
+  shortSound: number; longSound: number; overSound: number; waterSound: number; phoneSound: number
+  shortPopup: boolean; longPopup: boolean; overPopup: boolean; waterPopup: boolean; phonePopup: boolean
+  // Full screen: the alert's screen opens by itself (needs "Display over other apps"). Break over has none.
+  shortFull: boolean; longFull: boolean; waterFull: boolean; phoneFull: boolean
+}
 
-interface State {
-  settings: Settings;
-  glasses: number; goal: number; season: 'summer' | 'monsoon' | 'transition' | 'winter';
-  inDay: boolean; nextDayStartAt: number | null;
-  nextBreakAt: number | null; nextBreakType: 'short' | 'long' | null; breakEndAt: number | null;
-  nextWaterAt: number | null; pausedUntil: number | null;
-  setup: { notifications: boolean; battery: boolean; fullScreen: boolean };
-  manufacturer: string;
+export interface State {
+  settings: Settings
+  glasses: number; goal: number; season: 'summer' | 'monsoon' | 'transition' | 'winter'; tip: string
+  inDay: boolean; nextDayStartAt: number | null
+  nextBreakAt: number | null; nextBreakType: 'short' | 'long' | null; breakEndAt: number | null
+  nextWaterAt: number | null; waterCutoffAt: number | null; pausedUntil: number | null
+  phoneRunning: boolean; phoneInUseSince: number | null; phoneRemindedAt: number | null
+  dayStartAt: number | null; dayEndAt: number | null; waterStartAt: number | null
+  setup: { notifications: boolean; battery: boolean; fullScreen: boolean; overlay: boolean; phoneUse: boolean }
+  manufacturer: string
+}
+
+export interface DigitalCarePlugin {
+  getState(): Promise<State>
+  saveSettings(settings: Settings): Promise<State>
+  logGlass(): Promise<State>
+  removeGlass(): Promise<State>
+  pause(opts: { minutes: number | null }): Promise<State>
+  resume(): Promise<State>
+  skipBreak(): Promise<State>
+  snoozeBreak(): Promise<State>
+  testAlert(opts: { alert: AlertId; sound: number; popup: boolean }): Promise<void>
+  openSystemSettings(opts: { page: SystemPage; channel?: string }): Promise<void>
+  /** Sends DigitalCare to the back, if a reminder opened it over another app: you land where you were. */
+  leave(): Promise<void>
+  getLaunchScreen(): Promise<{ screen: Screen }>
+  addListener(event: 'launchScreen', cb: (e: { screen: Screen }) => void): Promise<PluginListenerHandle>
+  addListener(event: 'appResume', cb: () => void): Promise<PluginListenerHandle>
 }
 ```
 
-React fetches `getState()` again whenever the app comes to the front (`visibilitychange`). Countdowns are calculated in React from the timestamps.
+React fetches `getState()` again whenever the app comes to the front (the native `appResume` event, which also fires after system dialogs) and once more 1.5 s after launch. Countdowns are calculated in React from the timestamps.
 
 System pages:
 
@@ -194,17 +229,17 @@ System pages:
   - Pause / Resume.
   - Night light and Extra Dim buttons.
   - Settings link.
-- **Break screen** (`short` / `long`):
+- **Break screen** (`short` / `long` / `phone`; the phone-use one has no scheduled break and counts down from when it opens):
   - Animation.
   - Countdown ring plus the remaining time as text.
   - Tip.
-  - Done and Skip.
+  - Done and Skip (no Skip for the phone-use screen). Done also hands the phone back to the app the reminder opened over.
 - **Water screen:**
   - Animation.
   - Today's count / goal.
   - Drank 1 glass and Done.
 - **Settings:**
-  - All settings from section 6.
+  - All settings from section 6, in cards: Language, Eye breaks and hours (with the hours for each day), Phone use, Water, Lock screen, Alerts. Edits not saved yet survive a reminder opening over the screen.
   - A "Sound & vibration" button per channel.
   - The disclaimer.
 - **Animations:**
@@ -240,7 +275,7 @@ Other brands get a single link to dontkillmyapp.com.
 
 1. Each day uses its own wake/sleep time, a day that is off has no window, and the next wake skips off days.
 2. A sleep time after midnight (00:30) gives the correct window.
-3. Every Nth break is long; snooze keeps the type and doesn't increment the counter; skip moves to the next break.
+3. The long break comes exactly the set number of minutes after the last one ended, even between two regular slots; snooze keeps the type and does not restart the timer; skip moves to the next break.
 4. The next break = break end + short interval.
 5. Pause until tomorrow resumes at the next wake time.
 6. Water spacing: behind schedule hits the 30-min floor, ahead hits the 120-min cap, goal met gives no reminder, and nothing comes after the cutoff.

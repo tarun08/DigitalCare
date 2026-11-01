@@ -12,7 +12,8 @@ public final class Settings {
     public int[] daySleep = {1380, 1380, 1380, 1380, 1380, 1410, 1410};
     public int[] dayOn = {1, 1, 1, 1, 1, 1, 1};
     public boolean breaksOn = true;
-    public int shortEveryMin = 20, shortSec = 20, longEveryN = 3, longMin = 5;
+    public int shortEveryMin = 20, shortSec = 20, longMin = 5;
+    public int longEveryMin = 60; // minutes from the end of one long break to the next
     public boolean waterOn = true, smartWater = true;
     public int customGoal = 8, customEveryMin = 60, glassMl = 250, stopBeforeSleepMin = 90;
     public boolean waterCustom = false; // on: water runs from waterStart to waterStop; off: 10 min after wake until stopBeforeSleepMin before sleep
@@ -20,6 +21,9 @@ public final class Settings {
     // How each alert is delivered. Sound: 0 sound + vibration, 1 sound only, 2 vibration only, 3 silent. Popup false = quiet.
     public int shortSound = 0, longSound = 0, overSound = 2, waterSound = 0, phoneSound = 0;
     public boolean shortPopup = true, longPopup = true, overPopup = false, waterPopup = true, phonePopup = true;
+    // Full screen: the alert's screen opens by itself (needs "Display over other apps"). Break over has none.
+    public boolean shortFull = false, longFull = false, waterFull = false, phoneFull = false;
+    public String language = "en"; // the language of the reminders: "en" or "hi"
     public boolean wakeScreen = false;
     public boolean screenOn = true;
     public int screenLimitMin = 15;
@@ -31,6 +35,7 @@ public final class Settings {
         daySleep = days(daySleep, d.daySleep, 1439);
         dayOn = days(dayOn, d.dayOn, 1);
         if (Arrays.stream(dayOn).sum() == 0) dayOn = d.dayOn; // at least one day stays on
+        language = "hi".equals(language) ? "hi" : "en";
         waterStart = time(waterStart, d.waterStart);
         waterStop = time(waterStop, d.waterStop);
         shortSound = clamp(shortSound, 0, 3);
@@ -40,7 +45,7 @@ public final class Settings {
         phoneSound = clamp(phoneSound, 0, 3);
         shortEveryMin = clamp(shortEveryMin, 1, 60);
         shortSec = clamp(shortSec, 10, 60);
-        longEveryN = clamp(longEveryN, 2, 99);
+        longEveryMin = clamp(longEveryMin, 2 * shortEveryMin, 1440); // at least one short break between two long ones
         longMin = clamp(longMin, 1, 15);
         customGoal = clamp(customGoal, 1, 20);
         customEveryMin = clamp(customEveryMin, 1, 180);
@@ -55,6 +60,8 @@ public final class Settings {
      * they become the seven days. Settings already saved with the seven days, or nothing saved yet, are left alone.
      */
     static void migrate(JSONObject saved, Settings s) {
+        // "Every Nth break is long" became "long break every so many minutes".
+        if (!saved.has("longEveryMin") && saved.has("longEveryN")) s.longEveryMin = saved.optInt("longEveryN", 3) * s.shortEveryMin;
         if (saved.has("dayWake")) return;
         int weekdayWake = minutes(saved.optString("weekdayWake"), 420), weekdaySleep = minutes(saved.optString("weekdaySleep"), 1380);
         int weekendWake = minutes(saved.optString("weekendWake"), 510), weekendSleep = minutes(saved.optString("weekendSleep"), 1410);

@@ -9,12 +9,12 @@ public class SettingsTest {
     @Test
     public void clampKeepsRangesAndDefaults() {
         Settings s = new Settings();
-        s.shortEveryMin = 0; s.shortSec = 500; s.longEveryN = 1; s.longMin = 99;
+        s.shortEveryMin = 0; s.shortSec = 500; s.longEveryMin = 1; s.longMin = 99;
         s.customGoal = 0; s.customEveryMin = 1000; s.glassMl = 5; s.stopBeforeSleepMin = -5;
         s.dayWake = new int[]{1, 2}; s.daySleep = new int[]{-5, 3000, 0, 0, 0, 0, 0}; s.dayOn = new int[7];
         s.clamp();
         assertEquals(1, s.shortEveryMin); assertEquals(60, s.shortSec);
-        assertEquals(2, s.longEveryN); assertEquals(15, s.longMin);
+        assertEquals(2, s.longEveryMin); assertEquals(15, s.longMin);          // two short intervals of 1 minute
         assertEquals(1, s.customGoal); assertEquals(180, s.customEveryMin);
         assertEquals(100, s.glassMl); assertEquals(0, s.stopBeforeSleepMin);
         assertArrayEquals(new Settings().dayWake, s.dayWake);                        // wrong length: back to the defaults
@@ -23,13 +23,49 @@ public class SettingsTest {
     }
 
     @Test
-    public void longBreakFrequencyTakesAnyWholeNumberFromTwoToNinetyNine() {
+    public void languageIsEnglishUnlessHindiIsChosen() {
         Settings s = new Settings();
-        assertEquals(3, s.longEveryN);
-        s.longEveryN = 12; s.clamp(); assertEquals(12, s.longEveryN);
-        s.longEveryN = 99; s.clamp(); assertEquals(99, s.longEveryN);
-        s.longEveryN = 500; s.clamp(); assertEquals(99, s.longEveryN);
-        s.longEveryN = 1; s.clamp(); assertEquals(2, s.longEveryN);       // every break long would be no rhythm at all
+        assertEquals("en", s.language);
+        s.language = "hi"; s.clamp(); assertEquals("hi", s.language);
+        s.language = "fr"; s.clamp(); assertEquals("en", s.language);
+        s.language = null; s.clamp(); assertEquals("en", s.language);
+    }
+
+    @Test
+    public void fullScreenIsOffByDefaultAndSurvivesSaving() throws Exception {
+        Settings s = new Settings();
+        assertFalse(s.shortFull); assertFalse(s.longFull); assertFalse(s.waterFull); assertFalse(s.phoneFull);
+        s.phoneFull = true;
+        Settings back = Json.read(Json.write(s), new Settings());
+        assertTrue(back.phoneFull); assertFalse(back.waterFull);
+    }
+
+    @Test
+    public void longBreakEveryTakesAnyMinutesFromTwoShortIntervalsToADay() {
+        Settings s = new Settings();
+        assertEquals(60, s.longEveryMin);
+        s.longEveryMin = 45; s.clamp(); assertEquals(45, s.longEveryMin);       // not a multiple of the 20 minute short break
+        s.longEveryMin = 30; s.clamp(); assertEquals(40, s.longEveryMin);       // there must be a short break in between
+        s.longEveryMin = 9999; s.clamp(); assertEquals(1440, s.longEveryMin);
+        s.shortEveryMin = 30; s.longEveryMin = 45; s.clamp(); assertEquals(60, s.longEveryMin);
+    }
+
+    @Test
+    public void aSavedEveryNthBreakBecomesMinutes() throws Exception {
+        JSONObject saved = new JSONObject("{\"shortEveryMin\":15,\"longEveryN\":5}");
+        Settings s = Json.read(saved, new Settings());
+        Settings.migrate(saved, s);
+        assertEquals(75, s.longEveryMin);                                       // every 5th break of 15 minutes
+
+        JSONObject already = new JSONObject("{\"shortEveryMin\":15,\"longEveryN\":4,\"longEveryMin\":50}");
+        Settings t = Json.read(already, new Settings());
+        Settings.migrate(already, t);
+        assertEquals(50, t.longEveryMin);                                       // minutes saved: left alone
+
+        JSONObject fresh = new JSONObject();
+        Settings f = Json.read(fresh, new Settings());
+        Settings.migrate(fresh, f);
+        assertEquals(60, f.longEveryMin);
     }
 
     @Test

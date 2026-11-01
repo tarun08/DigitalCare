@@ -4,4 +4,25 @@
     <string name="title_activity_main">DigitalCare</string>
     <string name="package_name">com.digitalcare.app</string>
     <string name="custom_url_scheme">com.digitalcare.app</string>
+
+    <!-- Reminder texts. values-hi has the same keys: StringsTest checks that, and the placeholders. -->
+    <string name="n_eye_break">Eye break · look 6 m away</string>
+    <string name="n_long_break">Long break · stand, walk, stretch</string>
+    <string name="n_skip">Skip</string>
+    <string name="n_snooze">Snooze 5 min</string>
+    <string name="n_break_over">Break over</string>
+    <string name="n_water">Drink water · %1$d/%2$d glasses</string>
+    <string name="n_water_first">Start your day with 1–2 glasses</string>
+    <string name="n_glass">Drank 1 glass</string>
+    <string name="n_phone_title">Time for a break</string>
+    <plurals name="n_phone_text">
+        <item quantity="one">You\'ve been using your phone for %1$d minute in a row. Look at something 6 m away.</item>
+        <item quantity="other">You\'ve been using your phone for %1$d minutes in a row. Look at something 6 m away.</item>
+    </plurals>
+    <string name="n_service_title">Phone-use reminder is on</string>
+    <string name="n_service_text">Change it in DigitalCare Settings.</string>
+    <string name="tip_summer">Nimbu pani, chaas or ORS after sweating. Avoid ice-cold water right after coming in from the heat.</string>
+    <string name="tip_monsoon">Humidity hides sweat loss. Drink boiled or filtered water.</string>
+    <string name="tip_transition">Sip regularly, even if you\'re not thirsty.</string>
+    <string name="tip_winter">Less thirst, same need. Warm water helps.</string>
 </resources>
