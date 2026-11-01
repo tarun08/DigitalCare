@@ -38,7 +38,8 @@ public class DigitalCarePlugin extends Plugin {
 
     @PluginMethod
     public void testAlert(PluginCall call) {
-        Engine.testAlert(getContext(), call.getString("alert", ""), call.getInt("sound", 0), call.getBoolean("popup", true));
+        Engine.testAlert(getContext(), call.getString("alert", ""), call.getInt("sound", 0), call.getBoolean("popup", true),
+                call.getBoolean("full", false), call.getString("title", ""), call.getString("text", ""));
         call.resolve();
     }
 

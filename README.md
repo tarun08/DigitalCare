@@ -8,7 +8,7 @@ It is made to be sideloaded, for an android phone. Everything stays on the phone
 
 **Eye breaks**
 - A short break every 20 minutes (1 to 60) lasting 20 seconds (10 to 60). A long break lasting 5 minutes (1 to 15) comes every 60 minutes, to stand, walk and stretch. Set that to any number of minutes, from twice the short interval up to 1440: the long break comes exactly that long after the last one ended.
-- The notification counts down and has **Skip** and **Snooze 5 min** buttons. A short "Break over" signal ends the break. Tapping a notification opens a break screen with an animation and a countdown.
+- The notification counts down and has **Skip** and **Snooze 5 min** buttons. A "Break over" signal ends the break and closes itself after 5 seconds. Tapping a notification opens a break screen with an animation and a countdown.
 
 **Water**
 - A daily goal that follows the season (North India): 12 glasses of 250 ml in summer, 10 in the monsoon and in March and October, 8 in winter. Or set your own goal and spacing. The glass size can be changed.
@@ -27,7 +27,7 @@ It is made to be sideloaded, for an android phone. Everything stays on the phone
 
 **Alerts**
 - For each of the five alerts (short break, long break, break over, water, phone use): sound and vibration, sound only, vibration only or silent, and how it appears: **full screen**, a pop-up banner or quiet. **Send a test alert** tries the sound and banner before you save.
-- **Full screen** opens the reminder's own screen by itself, over whatever you are doing, even while you use the phone. It needs "Display over other apps" for DigitalCare; Home shows a Fix button until it is on, and without it you get the pop-up banner. It is on offer for every alert except break over.
+- **Full screen** draws the reminder over whatever app is open, even while you use the phone: a title, the countdown and buttons (Skip and Done, or Drank 1 glass for water). It needs "Display over other apps" for DigitalCare. The app opens that page when you save with Full screen on, and Home shows a Fix button until it is on; without it you get the pop-up banner. It is drawn as a floating window, so it works on phones such as Vivo that block apps from opening screens in the background; if the phone refuses even that, DigitalCare's own screen is opened instead. It is not shown while the phone rings or during a call. **Send a test alert** shows it at once, and Settings (and Home, when it failed) says how the last one went: shown, or why not. Full screen is the starting choice for every alert, Break over included. Without "Display over other apps", the reminder still shows as a banner at the top of the screen, and Home says why the full screen did not show. Settings saved before this default switch to Full screen once; after a save, your choices stay.
 - Optional **Wake screen**: show break and water reminders over the lock screen when the phone is locked.
 
 **Language**

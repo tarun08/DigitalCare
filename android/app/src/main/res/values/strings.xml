@@ -9,6 +9,7 @@
     <string name="n_eye_break">Eye break · look 6 m away</string>
     <string name="n_long_break">Long break · stand, walk, stretch</string>
     <string name="n_skip">Skip</string>
+    <string name="n_done">Done</string>
     <string name="n_snooze">Snooze 5 min</string>
     <string name="n_break_over">Break over</string>
     <string name="n_water">Drink water · %1$d/%2$d glasses</string>

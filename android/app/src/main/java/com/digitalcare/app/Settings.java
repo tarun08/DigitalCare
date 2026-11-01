@@ -21,8 +21,9 @@ public final class Settings {
     // How each alert is delivered. Sound: 0 sound + vibration, 1 sound only, 2 vibration only, 3 silent. Popup false = quiet.
     public int shortSound = 0, longSound = 0, overSound = 2, waterSound = 0, phoneSound = 0;
     public boolean shortPopup = true, longPopup = true, overPopup = false, waterPopup = true, phonePopup = true;
-    // Full screen: the alert's screen opens by itself (needs "Display over other apps"). Break over has none.
-    public boolean shortFull = false, longFull = false, waterFull = false, phoneFull = false;
+    // Full screen: the reminder is drawn over the open app (needs "Display over other apps").
+    public boolean shortFull = true, longFull = true, overFull = true, waterFull = true, phoneFull = true;
+    public boolean fullScreenDefault = true; // marks settings saved since full screen became the default (see migrate)
     public String language = "en"; // the language of the reminders: "en" or "hi"
     public boolean wakeScreen = false;
     public boolean screenOn = true;
@@ -62,6 +63,8 @@ public final class Settings {
     static void migrate(JSONObject saved, Settings s) {
         // "Every Nth break is long" became "long break every so many minutes".
         if (!saved.has("longEveryMin") && saved.has("longEveryN")) s.longEveryMin = saved.optInt("longEveryN", 3) * s.shortEveryMin;
+        // Full screen became the default: settings saved before that switch it on, once. A save writes the marker.
+        if (!saved.has("fullScreenDefault")) s.shortFull = s.longFull = s.overFull = s.waterFull = s.phoneFull = true;
         if (saved.has("dayWake")) return;
         int weekdayWake = minutes(saved.optString("weekdayWake"), 420), weekdaySleep = minutes(saved.optString("weekdaySleep"), 1380);
         int weekendWake = minutes(saved.optString("weekendWake"), 510), weekendSleep = minutes(saved.optString("weekendSleep"), 1410);

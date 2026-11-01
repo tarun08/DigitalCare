@@ -32,12 +32,26 @@ public class SettingsTest {
     }
 
     @Test
-    public void fullScreenIsOffByDefaultAndSurvivesSaving() throws Exception {
+    public void fullScreenIsOnByDefaultAndSurvivesSaving() throws Exception {
         Settings s = new Settings();
-        assertFalse(s.shortFull); assertFalse(s.longFull); assertFalse(s.waterFull); assertFalse(s.phoneFull);
-        s.phoneFull = true;
+        assertTrue(s.shortFull); assertTrue(s.longFull); assertTrue(s.overFull); assertTrue(s.waterFull); assertTrue(s.phoneFull);
+        s.phoneFull = false;
         Settings back = Json.read(Json.write(s), new Settings());
-        assertTrue(back.phoneFull); assertFalse(back.waterFull);
+        assertFalse(back.phoneFull); assertTrue(back.waterFull);
+        s.overFull = false;
+        assertFalse(Json.read(Json.write(s), new Settings()).overFull);
+    }
+
+    @Test
+    public void settingsSavedBeforeFullScreenWasTheDefaultGetItOnceThenKeepTheirChoice() throws Exception {
+        JSONObject old = new JSONObject("{\"shortFull\":false,\"phoneFull\":false}");        // saved before the change
+        Settings s = Json.read(old, new Settings());
+        Settings.migrate(old, s);
+        assertTrue(s.shortFull); assertTrue(s.phoneFull);
+        JSONObject saved = new JSONObject("{\"fullScreenDefault\":true,\"phoneFull\":false}"); // saved since: the choice stays
+        Settings t = Json.read(saved, new Settings());
+        Settings.migrate(saved, t);
+        assertFalse(t.phoneFull); assertTrue(t.shortFull);
     }
 
     @Test

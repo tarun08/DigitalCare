@@ -19,6 +19,7 @@ import java.util.Locale;
 final class Notifier {
     static final int ID_BREAK = 1, ID_BREAK_OVER = 2, ID_WATER = 3, ID_SCREEN = 4, ID_SCREEN_SERVICE = 5, ID_TEST = 6;
     private static final int FLAGS = PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
+    private static final long OVER_MS = 5_000; // "Break over" closes itself after this, as a banner and as a full screen
 
     private Notifier() {}
 
@@ -49,13 +50,23 @@ final class Notifier {
                 .addAction(action(c, EventReceiver.SKIP, 30, t.getString(R.string.n_skip)))
                 .addAction(action(c, EventReceiver.SNOOZE, 31, t.getString(R.string.n_snooze)));
         post(c, ID_BREAK, b);
-        if (a.full(s)) launch(c, isLong ? "long" : "short");
+        if (a.full(s)) {
+            Context app = c.getApplicationContext();
+            overlay(c, a.id, t.getString(isLong ? R.string.n_long_break : R.string.n_eye_break), "", endAt, true, scale(s),
+                    new Overlay.Choice(t.getString(R.string.n_skip), false, () -> Engine.skip(app)),
+                    new Overlay.Choice(t.getString(R.string.n_done), true, null));
+        }
     }
 
     static void postBreakOver(Context c, Settings s) {
+        Context t = in(c, s.language);
         post(c, ID_BREAK_OVER, builder(c, channel(c, Alert.OVER, Alert.OVER.style(s)), ID_BREAK_OVER, null, false)
-                .setContentTitle(in(c, s.language).getString(R.string.n_break_over))
-                .setTimeoutAfter(10_000));
+                .setContentTitle(t.getString(R.string.n_break_over))
+                .setTimeoutAfter(OVER_MS));
+        if (Alert.OVER.full(s)) {
+            overlay(c, null, t.getString(R.string.n_break_over), "", System.currentTimeMillis() + OVER_MS, false, scale(s),
+                    new Overlay.Choice(t.getString(R.string.n_done), true, null));
+        }
     }
 
     static void postWater(Context c, Settings s, boolean first, int glasses, int goal, Season season, boolean wakeScreen) {
@@ -66,15 +77,31 @@ final class Notifier {
                 .setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .addAction(action(c, EventReceiver.GLASS, 32, t.getString(R.string.n_glass))));
-        if (Alert.WATER.full(s)) launch(c, "water");
+        if (Alert.WATER.full(s)) {
+            Context app = c.getApplicationContext();
+            overlay(c, Alert.WATER.id, t.getString(R.string.n_water, glasses, goal), text, System.currentTimeMillis() + 120_000, false, scale(s),
+                    new Overlay.Choice(t.getString(R.string.n_glass), true, () -> Engine.logGlass(app)),
+                    new Overlay.Choice(t.getString(R.string.n_done), false, null));
+        }
     }
 
     static void postScreenBreak(Context c, Settings s, int minutes) {
         Context t = in(c, s.language);
+        String text = t.getResources().getQuantityString(R.plurals.n_phone_text, minutes, minutes);
         post(c, ID_SCREEN, builder(c, channel(c, Alert.PHONE, Alert.PHONE.style(s)), ID_SCREEN, "phone", Alert.PHONE.full(s))
                 .setContentTitle(t.getString(R.string.n_phone_title))
-                .setContentText(t.getResources().getQuantityString(R.plurals.n_phone_text, minutes, minutes)));
-        if (Alert.PHONE.full(s)) launch(c, "phone");
+                .setContentText(text));
+        if (Alert.PHONE.full(s)) {
+            overlay(c, Alert.PHONE.id, t.getString(R.string.n_phone_title), text, System.currentTimeMillis() + s.shortSec * 1000L, true, scale(s),
+                    new Overlay.Choice(t.getString(R.string.n_done), true, null));
+        }
+    }
+
+    /** Draws the reminder over the open app, or records why it cannot (Home and Settings show the reason). */
+    private static void overlay(Context c, String screen, String title, String body, long endAt, boolean clock, float scale, Overlay.Choice... choices) {
+        String blocked = Overlay.blocked(android.provider.Settings.canDrawOverlays(c), c.getSystemService(AudioManager.class).getMode());
+        if (blocked != null) Engine.fullScreenTried(c, blocked);
+        else Overlay.show(c, screen, title, body, endAt, clock, scale, choices);
     }
 
     /** The season's water tip in the reminder language. */
@@ -94,11 +121,18 @@ final class Notifier {
         return c.createConfigurationContext(config);
     }
 
-    /** A sample of an alert delivered this way, for the Settings screen's "Send a test alert". */
-    static void postTest(Context c, Alert a, AlertStyle style) {
+    /**
+     * A sample of an alert delivered this way, for the Settings screen's "Send a test alert". The screen sends the
+     * texts in its own language; with `full` the sample is also drawn over the screen for 10 s.
+     */
+    static void postTest(Context c, Settings s, Alert a, AlertStyle style, String title, String text, boolean full) {
         post(c, ID_TEST, builder(c, channel(c, a, style), ID_TEST, null, false)
-                .setContentTitle("Test: " + a.label)
-                .setContentText("This is how it looks and sounds (" + style.describe() + ")."));
+                .setContentTitle(title)
+                .setContentText(text));
+        if (full) {
+            overlay(c, a.id, title, text, System.currentTimeMillis() + 10_000, true, scale(s),
+                    new Overlay.Choice(in(c, s.language).getString(R.string.n_done), true, null));
+        }
     }
 
     static Notification screenServiceNotice(Context c, String language) {
@@ -155,22 +189,8 @@ final class Notifier {
         return new Notification.Action.Builder(null, title, pi).build();
     }
 
-    /**
-     * Opens a reminder's screen by itself, over whatever is on screen. Android allows that from the background only
-     * with "Display over other apps"; without it the banner already posted is all there is. Not during a call: the
-     * screen would cover its buttons.
-     */
-    private static void launch(Context c, String screen) {
-        if (!android.provider.Settings.canDrawOverlays(c)) return;
-        int mode = c.getSystemService(AudioManager.class).getMode();
-        if (mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION) return;
-        try {
-            c.startActivity(new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    .putExtra("screen", screen).putExtra("wake", true));
-        } catch (RuntimeException refused) {
-            // The phone said no: the banner is still there.
-        }
-    }
+    /** Hindi letters stand taller than Latin ones: set them at 90%, as the screens do. */
+    private static float scale(Settings s) { return "hi".equals(s.language) ? 0.9f : 1f; }
 
     private static void post(Context c, int id, Notification.Builder b) {
         c.getSystemService(NotificationManager.class).notify(id, b.build()); // dropped silently if permission is off

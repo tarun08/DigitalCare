@@ -29,20 +29,20 @@ enum Alert {
         switch (this) {
             case SHORT: return new AlertStyle(s.shortSound, s.shortPopup || s.shortFull);
             case LONG: return new AlertStyle(s.longSound, s.longPopup || s.longFull);
-            case OVER: return new AlertStyle(s.overSound, s.overPopup);
+            case OVER: return new AlertStyle(s.overSound, s.overPopup || s.overFull);
             case WATER: return new AlertStyle(s.waterSound, s.waterPopup || s.waterFull);
             default: return new AlertStyle(s.phoneSound, s.phonePopup || s.phoneFull);
         }
     }
 
-    /** Whether the alert's screen opens by itself. Break over has no screen. */
+    /** Whether the reminder is drawn over the open app. */
     boolean full(Settings s) {
         switch (this) {
             case SHORT: return s.shortFull;
             case LONG: return s.longFull;
+            case OVER: return s.overFull;
             case WATER: return s.waterFull;
-            case PHONE: return s.phoneFull;
-            default: return false;
+            default: return s.phoneFull;
         }
     }
 

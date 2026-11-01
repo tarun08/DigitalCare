@@ -29,6 +29,10 @@ export function Home({ state, act, go }: ScreenProps) {
   const reminded = state.phoneRemindedAt && new Date(state.phoneRemindedAt).toDateString() === new Date(now).toDateString()
     ? state.phoneRemindedAt : null
   const runs = (a: number | null, b: number | null) => a && b ? t.runs(fmtClock(a), fmtClock(b)) : null
+  // A full-screen reminder that did not show today, and why: the user sees the cause without asking.
+  const tf = text(s.language).full
+  const fullMissed = state.fullScreenAt && state.fullScreenResult !== 'shown'
+    && new Date(state.fullScreenAt).toDateString() === new Date(now).toDateString() ? state.fullScreenAt : null
   const breakHours = s.breaksOn ? runs(state.dayStartAt, state.dayEndAt) : null
   const waterHours = s.waterOn ? runs(state.waterStartAt, state.waterCutoffAt) : null
   const phoneHours = runs(state.dayStartAt, state.dayEndAt)
@@ -66,6 +70,7 @@ export function Home({ state, act, go }: ScreenProps) {
         {phoneLine && <p className="muted">{phoneLine}</p>}
         {phoneLine && phoneHours && <p className="hours">{phoneHours}</p>}
         {phoneLine && reminded && <p className="hours">{t.lastReminder(fmtClock(reminded))}</p>}
+        {fullMissed && <p className="hours">{tf.line(fmtClock(fullMissed), tf.why(state.fullScreenResult))}</p>}
       </section>
 
       <section className="card center">

@@ -6,11 +6,11 @@ import { fmtClock } from './time'
 
 type KeyOf<T> = { [K in keyof Settings]: Settings[K] extends T ? K : never }[keyof Settings]
 
-// `full` is the "Full screen" choice; Break over has no screen to open.
+// `full` is the "Full screen" choice: the reminder is drawn over the open app.
 const ALERTS: { id: AlertId; sound: KeyOf<number>; popup: KeyOf<boolean>; full?: KeyOf<boolean> }[] = [
   { id: 'short', sound: 'shortSound', popup: 'shortPopup', full: 'shortFull' },
   { id: 'long', sound: 'longSound', popup: 'longPopup', full: 'longFull' },
-  { id: 'over', sound: 'overSound', popup: 'overPopup' },
+  { id: 'over', sound: 'overSound', popup: 'overPopup', full: 'overFull' },
   { id: 'water', sound: 'waterSound', popup: 'waterPopup', full: 'waterFull' },
   { id: 'phone', sound: 'phoneSound', popup: 'phonePopup', full: 'phoneFull' },
 ]
@@ -39,6 +39,7 @@ export function SettingsScreen({ state, act, go }: ScreenProps) {
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setDraft(d => ({ ...d, [k]: v }))
   const t = text(draft.language).settings // the language you pick shows at once; Cancel puts it back
   usePageLanguage(draft.language, state.settings.language)
+  const tf = text(draft.language).full
 
   // An emptied field sends NaN -> null, and the engine keeps that setting's default.
   const num = (label: string, k: KeyOf<number>, min: number, max: number) => (
@@ -199,13 +200,19 @@ export function SettingsScreen({ state, act, go }: ScreenProps) {
                   <option value="quiet">{t.optQuiet}</option>
                 </select>
               </label>
-              <button onClick={() => { DigitalCare.testAlert({ alert: a.id, sound: draft[a.sound], popup: draft[a.popup] }).catch(() => {}) }}>
+              <button onClick={() => {
+                DigitalCare.testAlert({
+                  alert: a.id, sound: draft[a.sound], popup: draft[a.popup], full: full(a),
+                  title: t.testTitle(t.alertName[a.id]), text: t.testText(how(draft[a.sound], draft[a.popup], full(a))),
+                }).then(() => setTimeout(() => act(DigitalCare.getState()), 1000), () => {}) // then show how it went
+              }}>
                 {t.test}
               </button>
             </div>
           </details>
         ))}
         <p className="muted">{t.fullNote}</p>
+        {state.fullScreenAt && <p className="muted">{tf.line(fmtClock(state.fullScreenAt), tf.why(state.fullScreenResult))}</p>}
         <p className="muted">{t.muteNote}</p>
         <button onClick={() => { DigitalCare.openSystemSettings({ page: 'channel' }).catch(() => {}) }}>{t.openSound}</button>
       </Section>
@@ -213,7 +220,12 @@ export function SettingsScreen({ state, act, go }: ScreenProps) {
       <p className="muted">{t.disclaimer}</p>
 
       <div className="row">
-        <button className="primary" onClick={() => { act(DigitalCare.saveSettings(draft)); unsaved = null; go('home') }}>{t.save}</button>
+        <button className="primary" onClick={() => {
+          act(DigitalCare.saveSettings(draft)); unsaved = null; go('home')
+          // Full screen newly on and "Display over other apps" still off: ask for it now, don't wait for the Fix row on Home.
+          const added = ALERTS.some(a => a.full && draft[a.full] && !state.settings[a.full])
+          if (added && !state.setup.overlay) DigitalCare.openSystemSettings({ page: 'overlay' }).catch(() => {})
+        }}>{t.save}</button>
         <button onClick={() => { unsaved = null; go('home') }}>{t.cancel}</button>
       </div>
     </>

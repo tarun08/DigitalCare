@@ -46,9 +46,14 @@ final class Engine {
     static synchronized void ensureChannels(Context c) { Notifier.ensureChannels(c, settings(c)); }
 
     /** A sample of an alert delivered the way the Settings screen currently shows it, saved or not. */
-    static synchronized void testAlert(Context c, String alert, int sound, boolean popup) {
+    static synchronized void testAlert(Context c, String alert, int sound, boolean popup, boolean full, String title, String text) {
         Alert a = Alert.of(alert);
-        if (a != null) Notifier.postTest(c, a, new AlertStyle(sound, popup));
+        if (a != null) Notifier.postTest(c, settings(c), a, new AlertStyle(sound, popup || full), title, text, full);
+    }
+
+    /** How the last full-screen reminder went: "shown", or why not ("permission", "call", "failed: ..."). */
+    static synchronized void fullScreenTried(Context c, String result) {
+        prefs(c).edit().putLong("fullScreenAt", System.currentTimeMillis()).putString("fullScreenResult", result).apply();
     }
 
     static synchronized void logGlass(Context c) {
@@ -132,6 +137,8 @@ final class Engine {
                     .put("phoneRunning", ScreenService.running)
                     .put("phoneInUseSince", time(ScreenService.running ? ScreenService.use.inUseSince() : 0))
                     .put("phoneRemindedAt", time(prefs(c).getLong("phoneRemindedAt", 0)))
+                    .put("fullScreenAt", time(prefs(c).getLong("fullScreenAt", 0)))
+                    .put("fullScreenResult", prefs(c).getString("fullScreenResult", ""))
                     .put("setup", new JSONObject()
                             .put("notifications", nm.areNotificationsEnabled())
                             .put("battery", c.getSystemService(PowerManager.class).isIgnoringBatteryOptimizations(c.getPackageName()))

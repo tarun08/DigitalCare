@@ -41,29 +41,41 @@ public class AlertTest {
         Settings s = new Settings();
         assertEquals("short_0p", Alert.SHORT.channelId(Alert.SHORT.style(s)));
         assertEquals("long_0p", Alert.LONG.channelId(Alert.LONG.style(s)));
-        assertEquals("over_2q", Alert.OVER.channelId(Alert.OVER.style(s)));      // break over: vibration only, no pop-up
+        assertEquals("over_2p", Alert.OVER.channelId(Alert.OVER.style(s)));      // break over: vibration, and it pops up (full screen)
         assertEquals("water_0p", Alert.WATER.channelId(Alert.WATER.style(s)));
         assertEquals("phone_0p", Alert.PHONE.channelId(Alert.PHONE.style(s)));
     }
 
     @Test
-    public void fullScreenIsAnOptionForFourAlertsAndStillPostsTheBanner() {        // Break over has no screen to open
+    public void fullScreenIsTheDefaultForEveryAlertAndStillPostsTheBanner() {        // break over too: it closes itself, so it can be full screen
         Settings s = new Settings();
-        for (Alert a : Alert.values()) assertFalse(a.id, a.full(s));                // off by default: today's behaviour
-        s.shortFull = true; s.longFull = true; s.waterFull = true; s.phoneFull = true;
-        s.shortPopup = false; s.phonePopup = false;                                 // full screen wins over a stale quiet flag
+        for (Alert a : Alert.values()) assertTrue(a.id, a.full(s));                // on by default: full screen is the starting choice
+        s.shortFull = true; s.longFull = true; s.overFull = true; s.waterFull = true; s.phoneFull = true;
+        s.shortPopup = false; s.phonePopup = false; s.overPopup = false;            // full screen wins over a stale quiet flag
         assertTrue(Alert.SHORT.full(s)); assertTrue(Alert.LONG.full(s));
         assertTrue(Alert.WATER.full(s)); assertTrue(Alert.PHONE.full(s));
-        assertFalse(Alert.OVER.full(s));
+        assertTrue(Alert.OVER.full(s));
+        assertEquals("over_2p", Alert.OVER.channelId(Alert.OVER.style(s)));        // break over keeps its vibration, and pops up
         assertEquals("short_0p", Alert.SHORT.channelId(Alert.SHORT.style(s)));     // the banner channel, so the fallback pops up
         assertEquals("phone_0p", Alert.PHONE.channelId(Alert.PHONE.style(s)));
     }
 
     @Test
+    public void turningFullScreenOffGivesTheQuietChannel() {
+        Settings s = new Settings();
+        s.shortPopup = false;                                                   // a stale quiet flag: full screen still pops up
+        assertEquals("short_0p", Alert.SHORT.channelId(Alert.SHORT.style(s)));
+        s.shortFull = false; s.overFull = false;                                // turned off: quiet again
+        assertFalse(Alert.SHORT.full(s)); assertFalse(Alert.OVER.full(s));
+        assertEquals("short_0q", Alert.SHORT.channelId(Alert.SHORT.style(s)));
+        assertEquals("over_2q", Alert.OVER.channelId(Alert.OVER.style(s)));
+    }
+
+    @Test
     public void aChangedChoiceMakesTheOldChannelObsolete() {
         Settings s = new Settings();
-        s.waterSound = 3; s.waterPopup = false;                                    // water is now quiet and silent
-        List<String> existing = Arrays.asList("short_0p", "long_0p", "over_2q", "water_0p", "water_3q", "phone_0p",
+        s.waterSound = 3; s.waterPopup = false; s.waterFull = false;                                    // water is now quiet and silent
+        List<String> existing = Arrays.asList("short_0p", "long_0p", "over_2p", "water_0p", "water_3q", "phone_0p",
                 "screen_service", "short_break", "water", "some_other_channel");
         assertEquals(Arrays.asList("water_0p", "short_break", "water"), Alert.obsolete(existing, s));
     }

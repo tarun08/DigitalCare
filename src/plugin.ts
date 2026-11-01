@@ -16,8 +16,8 @@ export interface Settings {
   // Sound: 0 sound + vibration, 1 sound only, 2 vibration only, 3 silent. Popup false = quiet.
   shortSound: number; longSound: number; overSound: number; waterSound: number; phoneSound: number
   shortPopup: boolean; longPopup: boolean; overPopup: boolean; waterPopup: boolean; phonePopup: boolean
-  // Full screen: the alert's screen opens by itself (needs "Display over other apps"). Break over has none.
-  shortFull: boolean; longFull: boolean; waterFull: boolean; phoneFull: boolean
+  // Full screen: the reminder is drawn over the open app (needs "Display over other apps"). On by default.
+  shortFull: boolean; longFull: boolean; overFull: boolean; waterFull: boolean; phoneFull: boolean
 }
 
 export interface State {
@@ -27,6 +27,8 @@ export interface State {
   nextBreakAt: number | null; nextBreakType: 'short' | 'long' | null; breakEndAt: number | null
   nextWaterAt: number | null; waterCutoffAt: number | null; pausedUntil: number | null
   phoneRunning: boolean; phoneInUseSince: number | null; phoneRemindedAt: number | null
+  // The last full-screen reminder: "shown", or why not: "permission", "call", "failed: <what the phone said>".
+  fullScreenAt: number | null; fullScreenResult: string
   dayStartAt: number | null; dayEndAt: number | null; waterStartAt: number | null
   setup: { notifications: boolean; battery: boolean; fullScreen: boolean; overlay: boolean; phoneUse: boolean }
   manufacturer: string
@@ -41,7 +43,8 @@ export interface DigitalCarePlugin {
   resume(): Promise<State>
   skipBreak(): Promise<State>
   snoozeBreak(): Promise<State>
-  testAlert(opts: { alert: AlertId; sound: number; popup: boolean }): Promise<void>
+  /** A sample alert as chosen on screen; `full` also draws it over the screen. Title and text come in the page language. */
+  testAlert(opts: { alert: AlertId; sound: number; popup: boolean; full: boolean; title: string; text: string }): Promise<void>
   openSystemSettings(opts: { page: SystemPage; channel?: string }): Promise<void>
   /** Sends DigitalCare to the back, if a reminder opened it over another app: you land where you were. */
   leave(): Promise<void>

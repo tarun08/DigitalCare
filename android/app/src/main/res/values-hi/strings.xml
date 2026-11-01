@@ -3,6 +3,7 @@
     <string name="n_eye_break">आँखों का ब्रेक · 6 मीटर दूर देखें</string>
     <string name="n_long_break">लंबा ब्रेक · खड़े हों, टहलें, स्ट्रेच करें</string>
     <string name="n_skip">छोड़ें</string>
+    <string name="n_done">हो गया</string>
     <string name="n_snooze">5 मिनट टालें</string>
     <string name="n_break_over">ब्रेक पूरा हुआ</string>
     <string name="n_water">पानी पिएँ · %1$d/%2$d गिलास</string>

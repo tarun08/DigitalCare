@@ -45,6 +45,13 @@ const en = {
     comfort: 'Screen comfort', nightLight: 'Night light', nightHint: 'Your phone may call it “Eye protection”.',
     extraDim: 'Extra dim', extraHint: 'Look for “Extra dim”. Your phone may not have it.',
   },
+  full: {
+    line: (time: string, why: string) => `Last full screen at ${time}: ${why}`,
+    why: (result: string) => result === 'shown' ? 'shown'
+      : result === 'permission' ? 'not shown, “Display over other apps” is off'
+      : result === 'call' ? 'not shown during a call'
+      : `the phone blocked it (${result.replace(/^failed: /, '')}), so DigitalCare's own screen was opened instead`,
+  },
   setup: {
     title: 'Setup', notifications: 'Notifications', battery: 'Battery optimization off',
     phoneRunning: 'Phone-use reminder running', phoneStopped: 'Phone-use reminder was stopped',
@@ -91,7 +98,8 @@ const en = {
     kindFull: 'Full screen', kindPop: 'Pop-up', kindQuiet: 'Quiet',
     soundField: 'Sound and vibration', howField: 'How it appears',
     optFull: 'Full screen', optPop: 'Pop-up banner', optQuiet: 'Quiet, no pop-up', test: 'Send a test alert',
-    fullNote: 'Full screen opens the reminder by itself, over whatever you are doing. It needs “Display over other apps” for DigitalCare: Home shows a Fix button until it is on.',
+    testTitle: (name: string) => `Test: ${name}`, testText: (how: string) => `This is how it looks and sounds: ${how}.`,
+    fullNote: 'Full screen draws the reminder over whatever app is open. It needs “Display over other apps” for DigitalCare: its page opens when you save with Full screen on, and Home shows a Fix button until it is on.',
     muteNote: 'Android, Do Not Disturb and your phone’s own notification page can still mute an alert.',
     openSound: 'Open system sound settings',
     disclaimer: 'General guidance only. If you have a kidney or heart condition, follow your doctor’s advice on water.',
@@ -129,6 +137,13 @@ const hi: typeof en = {
     pause: 'रिमाइंडर रोकें', min30: '30 मिनट', hour1: '1 घंटा', untilTomorrow: 'कल तक',
     comfort: 'स्क्रीन आराम', nightLight: 'नाइट लाइट', nightHint: 'आपके फ़ोन में इसे “आई प्रोटेक्शन” कहा जा सकता है।',
     extraDim: 'एक्स्ट्रा डिम', extraHint: '“एक्स्ट्रा डिम” खोजें। हो सकता है आपके फ़ोन में यह न हो।',
+  },
+  full: {
+    line: (time, why) => `आख़िरी फ़ुल स्क्रीन ${time}: ${why}`,
+    why: result => result === 'shown' ? 'दिखी'
+      : result === 'permission' ? 'नहीं दिखी, “दूसरे ऐप्स के ऊपर दिखाएँ” बंद है'
+      : result === 'call' ? 'कॉल के दौरान नहीं दिखाई'
+      : `फ़ोन ने इसे रोक दिया (${result.replace(/^failed: /, '')}), इसलिए DigitalCare की अपनी स्क्रीन खोली गई`,
   },
   setup: {
     title: 'सेटअप', notifications: 'सूचनाएँ (नोटिफ़िकेशन)', battery: 'बैटरी ऑप्टिमाइज़ेशन बंद',
@@ -176,7 +191,8 @@ const hi: typeof en = {
     kindFull: 'फ़ुल स्क्रीन', kindPop: 'पॉप-अप', kindQuiet: 'शांत',
     soundField: 'आवाज़ और कंपन', howField: 'कैसे दिखे',
     optFull: 'फ़ुल स्क्रीन', optPop: 'पॉप-अप बैनर', optQuiet: 'शांत, पॉप-अप नहीं', test: 'टेस्ट अलर्ट भेजें',
-    fullNote: 'फ़ुल स्क्रीन में रिमाइंडर अपने-आप खुलता है, आप जो भी कर रहे हों उसके ऊपर। इसके लिए DigitalCare को “दूसरे ऐप्स के ऊपर दिखाएँ” की अनुमति चाहिए: जब तक यह चालू नहीं होती, होम पर “ठीक करें” बटन दिखता है।',
+    testTitle: name => `टेस्ट: ${name}`, testText: how => `यह ऐसा दिखेगा और सुनाई देगा: ${how}।`,
+    fullNote: 'फ़ुल स्क्रीन में रिमाइंडर उस ऐप के ऊपर दिखता है जो खुला हो। इसके लिए DigitalCare को “दूसरे ऐप्स के ऊपर दिखाएँ” की अनुमति चाहिए: फ़ुल स्क्रीन चालू करके सेव करने पर उसका पेज खुल जाता है, और जब तक यह चालू नहीं होती, होम पर “ठीक करें” बटन दिखता है।',
     muteNote: 'Android, डू नॉट डिस्टर्ब और फ़ोन का अपना नोटिफ़िकेशन पेज अब भी किसी अलर्ट को म्यूट कर सकते हैं।',
     openSound: 'सिस्टम साउंड सेटिंग्स खोलें',
     disclaimer: 'यह सिर्फ़ सामान्य सलाह है। अगर आपको किडनी या हृदय की बीमारी है, तो पानी के बारे में अपने डॉक्टर की सलाह मानें।',

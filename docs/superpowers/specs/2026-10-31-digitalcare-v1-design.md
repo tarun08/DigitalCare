@@ -78,7 +78,7 @@ Native engine (Java)
   - Set `BREAK_END` at now + duration (20 s short, 5 min long).
 - At `BREAK_END`:
   - Cancel the break notification.
-  - Post "Break over", which auto-dismisses after 10 s.
+  - Post "Break over", which closes itself after 5 s: as a banner, and as a full screen (on by default).
   - Next break = break end + short interval.
 - **Skip** (notification or break screen): cancel `BREAK_END`; next break = now + short interval.
 - **Snooze 5 min:** cancel `BREAK_END`; the same break type re-fires in 5 min.
@@ -119,16 +119,16 @@ Android never lets an app edit a notification channel, so each alert has one cha
 |---|---|---|
 | Short break | "Eye break · look 6 m away" + countdown | Skip, Snooze 5 min |
 | Long break | "Long break · stand, walk, stretch" + countdown | Skip, Snooze 5 min |
-| Break over | "Break over", dismissed after 10 s | none |
+| Break over | "Break over", closes itself after 5 s | none (Done when full screen) |
 | Water | "Drink water · 5/12 glasses" + season tip | Drank 1 glass |
 | Phone use | "Time for a break · You've been using your phone for N minutes in a row. Look at something 6 m away." | none |
 
-By default every alert uses sound + vibration and a pop-up banner, except Break over (vibration only, quiet).
+By default every alert is full screen (drawn over the open app, when "Display over other apps" is on) and also posts a pop-up banner. Break over uses vibration only.
 
-- **Per alert:** sound and vibration is one of sound + vibration, sound only, vibration only, silent. It appears as full screen (not for Break over), a pop-up banner, or quiet.
+- **Per alert:** sound and vibration is one of sound + vibration, sound only, vibration only, silent. It appears as full screen (the default), a pop-up banner, or quiet. Without the overlay permission the banner is all that shows, at the top of the screen.
 - Tapping a notification opens the matching screen (`short`, `long`, `water` or `phone`). The phone-use screen has no scheduled break behind it: it counts down the short-break length from when it opens.
 - **Wake screen switch on:** break and water notifications add a full-screen intent to MainActivity. For these launches only, MainActivity calls `setShowWhenLocked(true)` and `setTurnScreenOn(true)`. Android shows a full-screen intent as a pop-up banner while the phone is in use.
-- **Full screen** (short, long, water, phone): the banner is still posted, with the full-screen intent attached, and when the user has allowed "Display over other apps" (`SYSTEM_ALERT_WINDOW`) the app also starts MainActivity itself with the `screen` and `wake` extras, which Android allows from the background. Without that permission the banner is all there is, and the Setup card shows a Fix row.
+- **Full screen** (short, long, break over, water, phone; on by default): the banner is still posted (with the full-screen intent attached when the phone is locked), and when the user has allowed "Display over other apps" (`SYSTEM_ALERT_WINDOW`) the reminder is also drawn as an overlay window (`TYPE_APPLICATION_OVERLAY`, class `Overlay`) over the open app: a title, a countdown to the end of the break (20 s for phone use, 2 min and no clock for water, 5 s for break over) and buttons (Skip and Done; Drank 1 glass and Done; Done for phone use and break over). The overlay starts no screen from the background, which phones such as Vivo refuse unless a separate pop-up permission is on. It is skipped while the phone rings or a call is on (any `AudioManager` mode other than normal) so it cannot cover the call buttons. Views are made with a window context (Android 11+); if adding the window fails, DigitalCare's own screen is opened instead. Every try is recorded ("shown", "permission", "call" or "failed: <exception>") and shown in Settings → Alerts, and on Home when it did not show today. "Send a test alert" draws the overlay too (10 s) when that alert is set to Full screen, with its texts in the page language. Saving with Full screen newly on and the permission off opens the permission page; the Setup card keeps a Fix row until it is on. Without the permission the banner still posts at the top of the screen. Settings saved before full screen became the default are switched to it once: a save writes the `fullScreenDefault` marker, and the saved choices stay after that.
 - **Language:** the whole app (every screen, and the notifications) follows the Language setting, English or Hindi; the Settings page changes the moment a language is picked. The notification texts are in `res/values/strings.xml` (English) and `res/values-hi/strings.xml` (Hindi) and are read with a context set to the chosen language, not the phone's. The screens' own text is in `src/text.ts`, typed so that the build fails if a Hindi string is missing. A unit test checks that every Hindi notification string exists and has the same placeholders. The phone's own menu names in the Vivo steps stay in English, as the phone shows them. Hindi text is set at 90% of the English size (`styles.css`), because Devanagari letters stand taller than Latin ones.
 
 ### 5.6 Alarms and permissions
@@ -153,7 +153,7 @@ By default every alert uses sound + vibration and a pop-up banner, except Break 
 | Glass size | 250 ml | 100–500 ml (display only) |
 | Stop before sleep | 90 min | 0–180 min |
 | Wake screen | off | on/off |
-| Alert shows as | pop-up banner (Break over: quiet) | full screen (not Break over), pop-up banner, quiet |
+| Alert shows as | full screen | full screen, pop-up banner, quiet |
 | Language | English | English, Hindi |
 
 Snooze is fixed at 5 min. The 1-minute minimums exist so on-phone testing is quick.
@@ -177,8 +177,8 @@ export interface Settings {
   // Sound: 0 sound + vibration, 1 sound only, 2 vibration only, 3 silent. Popup false = quiet.
   shortSound: number; longSound: number; overSound: number; waterSound: number; phoneSound: number
   shortPopup: boolean; longPopup: boolean; overPopup: boolean; waterPopup: boolean; phonePopup: boolean
-  // Full screen: the alert's screen opens by itself (needs "Display over other apps"). Break over has none.
-  shortFull: boolean; longFull: boolean; waterFull: boolean; phoneFull: boolean
+  // Full screen: the reminder is drawn over the open app (needs "Display over other apps"). On by default.
+  shortFull: boolean; longFull: boolean; overFull: boolean; waterFull: boolean; phoneFull: boolean
 }
 
 export interface State {

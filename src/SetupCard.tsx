@@ -18,7 +18,7 @@ export function SetupCard({ state }: { state: State }) {
     [t.battery, state.setup.battery, 'battery'],
   ]
   if (s.screenOn) rows.push([state.setup.phoneUse ? t.phoneRunning : t.phoneStopped, state.setup.phoneUse, 'battery'])
-  const anyFull = s.shortFull || s.longFull || s.waterFull || s.phoneFull
+  const anyFull = s.shortFull || s.longFull || s.overFull || s.waterFull || s.phoneFull
   if (s.wakeScreen || anyFull) rows.push([t.fullScreen, state.setup.fullScreen, 'fullScreen'])
   if (anyFull) rows.push([t.overlay, state.setup.overlay, 'overlay'])
   const vivo = state.manufacturer === 'vivo'
